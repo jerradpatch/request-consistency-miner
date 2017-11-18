@@ -3,6 +3,9 @@ WIP
 # Request-Consistency-Miner
 - This makes a request, for the purpose of data mining, consistant given remote server anti-mining tactics. We use tor exit nodes for proxying requests.
 
+## Concepts used:
+Tor, NodeJs, Typescript, RxJs
+
 ## anti-tactics we handle / Features Provided:
 -- Ip Blacklisting
 -- Ip usage limit/back off
@@ -15,3 +18,18 @@ Black listing is attempted to be prevented by using Ip usage limits.
 Ip usage limits/back off - uWhere a timelimit is set on an IP address before it can be used again.
 
 Resource request reduction - cache the requested URL's to a set time limit, serving the originally fetched page until that time limit expires.                          
+
+Configuration Object:
+
+```javascript
+{
+  "debug": <boolean>,
+  "readFromDiskWhenDebug": <boolean>
+  source="<regex>" : {
+    "ipBlackList": [],
+    "ipUsage": {
+      ipAddress="<string" : <Date>
+    }
+  }
+}
+```
