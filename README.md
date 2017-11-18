@@ -7,6 +7,8 @@ WIP
 -- Ip Blacklisting
 -- Ip usage limit/back off
 -- Resource request reduction
+-- Set headers + auto Randomize userAgent header
+
 
 ### Definitions:
 black listing - black listed an Ip that was used to make a request, we will never use that IP again.
