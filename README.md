@@ -7,10 +7,10 @@ WIP
 Tor, NodeJs, Typescript, RxJs
 
 ## anti-tactics we handle / Features Provided:
--- Ip Blacklisting
--- Ip usage limit/back off
+-- Ip Blacklisting per source
+-- Ip usage limit/back off per source
 -- Resource request reduction
--- Set headers + auto Randomize userAgent header
+-- Set headers per source + auto Randomize userAgent header
 
 
 ### Definitions:
@@ -25,13 +25,26 @@ Configuration Object:
 
 ```javascript
 {
-  "debug": <boolean>,
-  "readFromDiskWhenDebug": <boolean>
-  source="<regex>" : {
-    "ipBlackList": [],
-    "ipUsage": {
-      ipAddress="<string" : <Date>
+  "torClient": {
+    "debug": true,
+    "options": {
+      "password": "LoveMaoMao1234",
+      "host": "localhost",
+      "controlPort": 9051,
+      "socksPort": 9050,
+      "type": 5
     }
-  }
+  },
+  rcmOptions : {
+      "storagePath": <string>,
+      "debug"?: <boolean>,
+      "readFromDiskAlways"?: <boolean>,
+       [source:string] : {
+        "ipBlackList"?: Function(page: string): boolean,
+        "ipUsageLimit"?: <number>,
+        "diskTimeToLive"?: <number>
+        "requestHeaders"?: Function(): Object
+      }
+  } : IRCMOptions
 }
 ```

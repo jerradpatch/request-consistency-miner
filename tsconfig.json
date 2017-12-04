@@ -1,22 +1,23 @@
 {
-  "compilerOptions":{
+  "compilerOptions": {
     "alwaysStrict":true,
     "declaration":true,
     "moduleResolution":"Node",
     "sourceMap": true,
     "target": "es5",
     "pretty":true,
+    "skipLibCheck": true,
     "lib": [
-      "es5",
-      "es2015.core"
+      "es2015.core",
+      "es2015.promise",
+      "es5"
     ]
   },
   "include": [
     "index.ts",
-    "/test"
+    "test/**/*"
   ],
   "exclude": [
-    "node_modules",
-    "**/*.spec.ts"
+    "node_modules"
   ]
 }

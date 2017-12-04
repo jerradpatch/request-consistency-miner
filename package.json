@@ -1,0 +1,48 @@
+{
+  "name": "request-consistency-miner",
+  "version": "1.0.0",
+  "description": "This makes a request, for the purpose of data mining, consistant given remote server anti-mining tactics. We use tor exit nodes for proxying requests.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "fibers": "^2.0.0",
+    "request": "^2.67.0",
+    "rxjs": "^5.5.3",
+    "socks": "^1.1.8",
+    "tor-request": "https://github.com/jerradpatch/tor-request/tarball/master"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.44",
+    "@types/node": "^8.0.47",
+    "@types/request": "^2.0.7",
+    "@types/rx": "^4.1.1",
+    "mkdirp": "^0.5.1",
+    "mocha": "^4.0.1",
+    "rewiremock": "^3.0.0",
+    "ts-node": "^3.3.0",
+    "typescript": "^2.5.3"
+  },
+  "scripts": {
+    "clean": "rm ./index.js --force && find ./test -name '*.js*' -exec rm {} \\;",
+    "pretest": "npm run clean && tsc -p ./",
+    "test": "./node_modules/.bin/jasmine"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jerradpatch/request-consistency-miner.git"
+  },
+  "keywords": [
+    "mining",
+    "tor",
+    "request",
+    "consistency"
+  ],
+  "author": "jerrad patch",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jerradpatch/request-consistency-miner/issues"
+  },
+  "homepage": "https://github.com/jerradpatch/request-consistency-miner#readme"
+}
