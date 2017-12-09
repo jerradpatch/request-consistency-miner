@@ -16,25 +16,25 @@ let requestHeaders = null;
 
 function mockFs(contents: IPageCacheObj) {
   rewiremock('fs')
-      .with({
-        readFileSync: () => {
-          return contents;
-        },
-        writeFileSync: (path, data) => {
-          syncWrite = data;
-        },
-        readFile: (a,b,c) => {
-          asycContentsRead = true;
-          c(null, contents);
-        },
-        writeFile: (path, data, func) => {
-          asycWrite = data;
-          func();
-        },
-        unlink: (path, err) => {
-          asycWrite = null;
-        }
-      });
+    .with({
+      readFileSync: () => {
+        return contents;
+      },
+      writeFileSync: (path, data) => {
+        syncWrite = data;
+      },
+      readFile: (a,b,c) => {
+        asycContentsRead = true;
+        c(null, contents);
+      },
+      writeFile: (path, data, func) => {
+        asycWrite = data;
+        func();
+      },
+      unlink: (path, err) => {
+        asycWrite = null;
+      }
+    });
 }
 
 function mockFs_emptyDisk(contents: IPageCacheObj) {
