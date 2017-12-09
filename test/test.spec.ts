@@ -3,7 +3,7 @@ import * as mkdirp from 'mkdirp';
 import * as fs from 'fs';
 import * as Fiber from 'fibers/fibers';
 import {Subject, Observable} from 'rxjs/Rx';
-import {IRCMOptions_source} from "../index";
+import {IRCMOptions_source, IPageCacheObj} from "../index";
 
 import rewiremock from 'rewiremock';
 
@@ -11,7 +11,10 @@ import rewiremock from 'rewiremock';
 //setup mocks
 let syncWrite = null;
 let asycWrite = null;
-function mockFs(contents: string) {
+let asycContentsRead = false;
+let requestHeaders = null;
+
+function mockFs(contents: IPageCacheObj) {
   rewiremock('fs')
       .with({
         readFileSync: () => {
@@ -21,36 +24,44 @@ function mockFs(contents: string) {
           syncWrite = data;
         },
         readFile: (a,b,c) => {
+          asycContentsRead = true;
           c(null, contents);
         },
         writeFile: (path, data, func) => {
           asycWrite = data;
           func();
+        },
+        unlink: (path, err) => {
+          asycWrite = null;
         }
       });
 }
 
-function mockFs_emptyDisk(contents: string) {
+function mockFs_emptyDisk(contents: IPageCacheObj) {
   rewiremock('fs')
       .with({
         readFileSync: () => {
-          return contents;
+          return null;
         },
         writeFileSync: (path, data) => {
           syncWrite = data;
         },
         readFile: (a,b,c) => {
+          asycContentsRead = true;
           throw "err";
         },
         writeFile: (path, data, func) => {
           asycWrite = data;
           func();
+        },
+        unlink: (path, err) => {
+          asycWrite = null;
         }
       });
 }
 
 
-function mockTR(ipAddresses: string[]) {
+function mockTR(ipAddresses: string[], returnedContent?: string) {
   let i = 0;
   rewiremock('tor-request')
       .with({
@@ -58,7 +69,8 @@ function mockTR(ipAddresses: string[]) {
           return {
             get: (uri: any, options: any, callback?: any) => {
               if (callback)
-                callback(null, {statusCode: 200}, "")
+                requestHeaders = options.headers;
+                callback(null, {statusCode: 200}, returnedContent || "");
             }
           }
         },
@@ -84,10 +96,13 @@ describe('testing all the different options', function () {
 
   beforeEach( () => {
     syncWrite = null;
+    asycWrite = null;
+    asycContentsRead = false;
+    requestHeaders = null;
   });
 
 
-  let fileContents = "this was read from the file";
+  let fileContents = {page: "this was read from the file"};
 
   var torClientOptions = {
     "debug": true,
@@ -101,7 +116,7 @@ describe('testing all the different options', function () {
   // ipBlackList: Function(page: string): boolean,
   var sourceUrl = "noplace.eu";
 
-  function createRcmOptions(ops){
+  function createRcmOptions(ops) {
     ops.storagePath = "~/tmp/rcmStorage";
     return ops;
   }
@@ -130,7 +145,7 @@ describe('testing all the different options', function () {
     }
   }
 
-  function randomUserHeaders(oSource: IRCMOptions_source) {
+  function randomUserHeaders(oSource: {source: string}) {
 
     let userAgent = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/61.0.3163.100 Mobile/13B143 Safari/601.1.46',
@@ -544,17 +559,113 @@ describe('testing all the different options', function () {
     });
   });
 
-  describe('source.diskTimeToLive, the request should return a different page after the time-to-live expired', function () {
+  describe('source.diskTimeToLive, the request should return a different page after the disk time-to-live expired', function () {
     it('should return without error', function (done) {
 
-      done();
+      let timeoutBeforeDiskCacheCleared = 1000;
+      let returnedPageData = "dummy text to be cleared via a write to the disk from 'diskTimeToLive' timeout";
+
+      let rcmOptions = createRcmOptions({
+        debug: false,
+        readFromDiskAlways: false,
+        ipUsageLimit: 100,
+        sources: {
+          [sourceUrl]: {
+            source:'sourceUrl',
+            diskTimeToLive: 1000,
+            requestHeaders: randomUserHeaders,
+            pageResponse: (body: string, url: string, ipAddress: string): Date| string => {
+              return 'true';
+            }
+          }
+        }
+      });
+
+      rewiremock.inScope(() => {
+
+        mockFs_emptyDisk(null);
+        //set currentIp
+        mockTR(["1.1.1.1"], returnedPageData);//needs a enough new IPs per expected fetch new IP
+
+        rewiremock.enable();
+
+        let RCM = require('../index');
+
+        Fiber(() => {
+          let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
+
+          rcm.torRequest('http://' + sourceUrl + '/');
+
+          if (!asycContentsRead)
+            throw new Error(`asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:${asycContentsRead}`);
+
+          setTimeout(() => {
+            if (!asycWrite || JSON.parse(asycWrite).page !== returnedPageData)
+              throw new Error(`asycWrite, the disk should have been attempted to have been written to with page data from, expect:${returnedPageData}, actual:${asycWrite}`);
+
+            //disk should contain cached page
+            setTimeout(() => {
+              if (asycWrite)
+                throw new Error(`asycWrite, contents should have been cleared from the disk when the 'diskTimeToLive' expired, expect:null, actual:${asycWrite}`);
+
+              rewiremock.disable();
+              done();
+            }, timeoutBeforeDiskCacheCleared + 100);
+          } ,0);
+        }).run();
+      });
+
     });
   });
 
   describe('source.requestHeaders, a request should be made with the given headers', function () {
     it('should return without error', function (done) {
 
-      done();
+
+      let expectedHeaders = randomUserHeaders({source: sourceUrl});
+
+      let rcmOptions = createRcmOptions({
+        debug: false,
+        readFromDiskAlways: false,
+        ipUsageLimit: 100,
+        sources: {
+          [sourceUrl]: {
+            source:sourceUrl,
+            requestHeaders: ()=>{
+              return expectedHeaders;
+            },
+            pageResponse: (body: string, url: string, ipAddress: string): Date| string => {
+              return 'true';
+            }
+          }
+        }
+      });
+
+      rewiremock.inScope(() => {
+
+        mockFs_emptyDisk(null);
+        //set currentIp
+        mockTR(["1.1.1.1", "2.2.2.2"]);//needs a enough new IPs per expected fetch new IP
+
+        rewiremock.enable();
+
+        let RCM = require('../index');
+
+        Fiber(() => {
+          let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
+
+          rcm.torRequest('http://' + sourceUrl + '/');
+
+          let eSt =JSON.stringify(expectedHeaders);
+          let rSt = JSON.stringify(requestHeaders);
+
+          if(eSt !== rSt)
+            throw new Error(`expectedHeaders, the expected headers does not match the expected headers for the http request, expectedHeaders:${eSt}, requestHeaders:${rSt}`);
+
+          rewiremock.disable();
+          done();
+        }).run();
+      });
     });
   });
 

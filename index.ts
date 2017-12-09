@@ -29,7 +29,8 @@ export interface IIpObj {
 };
 
 export interface IPageCacheObj {
-    date: Date;
+    date?: Date;
+    url?: string;
     page: string;
 };
 
@@ -38,7 +39,6 @@ export class RequestConsistencyMiner {
 
     private allUsedIpAddresses: IIpObj[] = [];
     private obsExpiringIpAddresses = new Subject<IIpObj>();
-    private subWatchList;
 
     private ipStorageLocation: string;
 
@@ -48,6 +48,7 @@ export class RequestConsistencyMiner {
     private tr : TorRequest;
 
     private pageCache: {[key:string]: IPageCacheObj} = {};
+    private obsExpiringPageCache = new Subject<IPageCacheObj>();
 
     constructor(private options: IRCMOptions, private torClientOptions) {
         this.ipStorageLocation = options.storagePath + '/ipStorage';
@@ -56,7 +57,21 @@ export class RequestConsistencyMiner {
         this.tcc = new TorClientControl(torClientOptions);
         this.tr = new TorRequest();
 
-        this.subWatchList = this.watchListStart(this.obsExpiringIpAddresses);
+        this.watchListStart(this.obsExpiringIpAddresses, (obj: IIpObj) => {
+            let i = 0;
+            while(i !== this.allUsedIpAddresses.length) {
+                if(this.allUsedIpAddresses[i].ipAddress === obj.ipAddress) {
+                    this.allUsedIpAddresses.splice(i, 1);
+                } else {
+                    i++;
+                }
+            }
+        });
+
+        this.watchListStart(this.obsExpiringPageCache, (obj: IPageCacheObj) => {
+            delete this.pageCache[obj.url];
+            this.deleteFile(obj.url);
+        });
 
         this.torNewSession();
     }
@@ -67,33 +82,24 @@ export class RequestConsistencyMiner {
 
         if(this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
 
-            if(this.pageCache[url]) {
-                if(this.options.debug)
-                    console.log(`Databases:common:torRequest: returned from page cache, url:${url}`);
-
-                return this.pageCache[url].page;
-            }
-
-            let futureDate;
-            if(oSource.diskTimeToLive)
-                futureDate = new Date(Date.now() + oSource.diskTimeToLive);
-
             let fut = new Future();
             this._readUrlFromDisk(url)
-                .then((data)=> {
-                    this.pageCache[url] = {date:futureDate, page:data};
-
+                .then((data: IPageCacheObj)=> {
                     fut.return(data);
                 })
                 .catch(()=> {
                     Fiber(() => {
-                        let data =  this._torRequest(url, recur);
-                        this.pageCache[url] = {date:futureDate, page:data};
+                        let futureDate;
+                        if(oSource.diskTimeToLive) {
+                            futureDate = new Date(Date.now() + oSource.diskTimeToLive);
+                        }
 
-                        return this._writeUrlToDisk(url, JSON.stringify({date:futureDate, page:data}))
-                            .then(()=>{
+                        let data =  this._torRequest(url, recur);
+
+                        return this._writeUrlToDisk(url, {date:futureDate, page:data})
+                            .then(() => {
                                 fut.return(data);
-                            }, (err)=>{
+                            }, (err) => {
                                 if(this.options.debug)
                                     console.log(`Databases:common:torRequest:error, _writeUrlToDisk->err:${err}`);
                                 fut.return(data);
@@ -291,12 +297,12 @@ export class RequestConsistencyMiner {
         return options;
     }
 
-    private watchListStart($list: Observable<IIpObj>) {
+    private watchListStart($list: Observable<any>, removeList ) {
         return $list
-            .filter((obj:IIpObj)=>{
+            .filter((obj:{date: Date})=>{
                 return !!obj.date;
             })
-            .mergeMap((obj:IIpObj)=>{
+            .mergeMap((obj:{date: Date})=>{
                 let difference = obj.date.valueOf() - Date.now();
                 let time = (difference > 0? difference : 0);
                 return Observable.create((obs)=>{
@@ -306,15 +312,8 @@ export class RequestConsistencyMiner {
                     }, time);
                 })
             })
-            .subscribe((obj:IIpObj)=>{
-                let i = 0;
-                while(i !== this.allUsedIpAddresses.length) {
-                    if(this.allUsedIpAddresses[i].ipAddress === obj.ipAddress) {
-                        this.allUsedIpAddresses.splice(i, 1);
-                    } else {
-                        i++;
-                    }
-                }
+            .subscribe((obj:{date: Date}) => {
+                removeList(obj);
             })
     }
 
@@ -384,13 +383,21 @@ export class RequestConsistencyMiner {
         };
     }
 
-    private _readUrlFromDisk(url: string): Promise<string> {
+    private _readUrlFromDisk(url: string): Promise<IPageCacheObj> {
 
         let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         let dir = this.options.storagePath + rDir;
 
+
+        if(this.pageCache[url]) {
+            if(this.options.debug)
+                console.log(`Databases:common:torRequest: returned from page cache, url:${url}`);
+
+            return Promise.resolve(this.pageCache[url]);
+        }
+
         return new Promise((res, rej)=> {
-            fs.readFile(dir, 'utf8', (err, data) => {
+            fs.readFile(dir, 'utf8', (err, obj: any) => {
                 if (err) {
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: could not read from disk, dir:${dir}, error:${err}`);
@@ -398,24 +405,58 @@ export class RequestConsistencyMiner {
                 } else {
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: ${dir}`);
-                    res(data);
+
+                    if(obj.date) {
+                        let currentDateMills = Date.now();
+                        let savedDateMills = obj.date.getMilliseconds();
+                        if (currentDateMills > savedDateMills) {
+                            if(this.options.debug)
+                                console.log(`Databases:common:_readUrlFromDisk: file read from disk had a date that expired, dir: ${dir}`);
+                            return this.deleteFile(dir).then(rej, (err)=>{
+                                rej(err);
+                            });
+                        }
+                    }
+
+                    obj.url = url;
+                    this.addPageToPageCache(obj, url);
+                    res(obj);
                 }
             });
         });
     }
 
-    private _writeUrlToDisk(url: string, data: string): Promise<string> {
+    private _writeUrlToDisk(url: string, data: IPageCacheObj): Promise<IPageCacheObj> {
 
         let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         let dir = this.options.storagePath + rDir;
 
         return new Promise((res, rej)=> {
-            fs.writeFile(dir, data, function(err) {
+            fs.writeFile(dir, JSON.stringify(data), (err) => {
                 if (err) {
                     rej(err);
-                } else {
-                    res(data);
+                    return;
                 }
+
+                this.addPageToPageCache(data, url);
+                res(data);
+            });
+        });
+    }
+
+    private addPageToPageCache(obj: IPageCacheObj, url: string){
+        this.obsExpiringPageCache.next(obj);
+        this.pageCache[url] = obj;
+    }
+
+    private deleteFile(path: string){
+        return new Promise((res,rej)=> {
+            fs.unlink(path, function (err) {
+                if (err) {
+                    rej(err);
+                    return;
+                }
+                res();
             });
         });
     }

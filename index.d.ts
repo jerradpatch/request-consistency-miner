@@ -19,7 +19,8 @@ export interface IIpObj {
     ipAddress: string;
 }
 export interface IPageCacheObj {
-    date: Date;
+    date?: Date;
+    url?: string;
     page: string;
 }
 export declare class RequestConsistencyMiner {
@@ -27,12 +28,12 @@ export declare class RequestConsistencyMiner {
     private torClientOptions;
     private allUsedIpAddresses;
     private obsExpiringIpAddresses;
-    private subWatchList;
     private ipStorageLocation;
     private torReady;
     private tcc;
     private tr;
     private pageCache;
+    private obsExpiringPageCache;
     constructor(options: IRCMOptions, torClientOptions: any);
     torRequest(url: any, recur?: number): string;
     private _torRequest(url, recur?);
@@ -43,7 +44,7 @@ export declare class RequestConsistencyMiner {
     private newIpUntilUnused();
     private ifIpAlreadyUsed(ipAddress);
     private randomUserHeaders(oSource);
-    private watchListStart($list);
+    private watchListStart($list, removeList);
     getIpBlackList(): string[];
     getIpBackoffList(): string[];
     private readIpList();
@@ -52,4 +53,6 @@ export declare class RequestConsistencyMiner {
     private writeList(path, list);
     private _readUrlFromDisk(url);
     private _writeUrlToDisk(url, data);
+    private addPageToPageCache(obj, url);
+    private deleteFile(path);
 }

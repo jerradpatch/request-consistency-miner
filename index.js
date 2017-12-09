@@ -10,17 +10,33 @@ var Rx_1 = require("rxjs/Rx");
 ;
 var RequestConsistencyMiner = /** @class */ (function () {
     function RequestConsistencyMiner(options, torClientOptions) {
+        var _this = this;
         this.options = options;
         this.torClientOptions = torClientOptions;
         this.allUsedIpAddresses = [];
         this.obsExpiringIpAddresses = new Rx_1.Subject();
         this.pageCache = {};
+        this.obsExpiringPageCache = new Rx_1.Subject();
         this.gettingNewSession = false;
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses = this.readIpList();
         this.tcc = new tor_request_1.TorClientControl(torClientOptions);
         this.tr = new tor_request_1.TorRequest();
-        this.subWatchList = this.watchListStart(this.obsExpiringIpAddresses);
+        this.watchListStart(this.obsExpiringIpAddresses, function (obj) {
+            var i = 0;
+            while (i !== _this.allUsedIpAddresses.length) {
+                if (_this.allUsedIpAddresses[i].ipAddress === obj.ipAddress) {
+                    _this.allUsedIpAddresses.splice(i, 1);
+                }
+                else {
+                    i++;
+                }
+            }
+        });
+        this.watchListStart(this.obsExpiringPageCache, function (obj) {
+            delete _this.pageCache[obj.url];
+            _this.deleteFile(obj.url);
+        });
         this.torNewSession();
     }
     RequestConsistencyMiner.prototype.torRequest = function (url, recur) {
@@ -28,25 +44,19 @@ var RequestConsistencyMiner = /** @class */ (function () {
         if (recur === void 0) { recur = 0; }
         var oSource = this.getSource(url);
         if (this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) {
-            if (this.pageCache[url]) {
-                if (this.options.debug)
-                    console.log("Databases:common:torRequest: returned from page cache, url:" + url);
-                return this.pageCache[url].page;
-            }
-            var futureDate_1;
-            if (oSource.diskTimeToLive)
-                futureDate_1 = new Date(Date.now() + oSource.diskTimeToLive);
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
-                _this.pageCache[url] = { date: futureDate_1, page: data };
                 fut_1.return(data);
             })
                 .catch(function () {
                 Fiber(function () {
+                    var futureDate;
+                    if (oSource.diskTimeToLive) {
+                        futureDate = new Date(Date.now() + oSource.diskTimeToLive);
+                    }
                     var data = _this._torRequest(url, recur);
-                    _this.pageCache[url] = { date: futureDate_1, page: data };
-                    return _this._writeUrlToDisk(url, JSON.stringify({ date: futureDate_1, page: data }))
+                    return _this._writeUrlToDisk(url, { date: futureDate, page: data })
                         .then(function () {
                         fut_1.return(data);
                     }, function (err) {
@@ -227,8 +237,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         };
         return options;
     };
-    RequestConsistencyMiner.prototype.watchListStart = function ($list) {
-        var _this = this;
+    RequestConsistencyMiner.prototype.watchListStart = function ($list, removeList) {
         return $list
             .filter(function (obj) {
             return !!obj.date;
@@ -244,15 +253,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             });
         })
             .subscribe(function (obj) {
-            var i = 0;
-            while (i !== _this.allUsedIpAddresses.length) {
-                if (_this.allUsedIpAddresses[i].ipAddress === obj.ipAddress) {
-                    _this.allUsedIpAddresses.splice(i, 1);
-                }
-                else {
-                    i++;
-                }
-            }
+            removeList(obj);
         });
     };
     //Ip LIST FUNCTIONALITY//////////////////////
@@ -316,8 +317,13 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var _this = this;
         var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         var dir = this.options.storagePath + rDir;
+        if (this.pageCache[url]) {
+            if (this.options.debug)
+                console.log("Databases:common:torRequest: returned from page cache, url:" + url);
+            return Promise.resolve(this.pageCache[url]);
+        }
         return new Promise(function (res, rej) {
-            fs.readFile(dir, 'utf8', function (err, data) {
+            fs.readFile(dir, 'utf8', function (err, obj) {
                 if (err) {
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: could not read from disk, dir:" + dir + ", error:" + err);
@@ -326,22 +332,51 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 else {
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: " + dir);
-                    res(data);
+                    if (obj.date) {
+                        var currentDateMills = Date.now();
+                        var savedDateMills = obj.date.getMilliseconds();
+                        if (currentDateMills > savedDateMills) {
+                            if (_this.options.debug)
+                                console.log("Databases:common:_readUrlFromDisk: file read from disk had a date that expired, dir: " + dir);
+                            return _this.deleteFile(dir).then(rej, function (err) {
+                                rej(err);
+                            });
+                        }
+                    }
+                    obj.url = url;
+                    _this.addPageToPageCache(obj, url);
+                    res(obj);
                 }
             });
         });
     };
     RequestConsistencyMiner.prototype._writeUrlToDisk = function (url, data) {
+        var _this = this;
         var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         var dir = this.options.storagePath + rDir;
         return new Promise(function (res, rej) {
-            fs.writeFile(dir, data, function (err) {
+            fs.writeFile(dir, JSON.stringify(data), function (err) {
                 if (err) {
                     rej(err);
+                    return;
                 }
-                else {
-                    res(data);
+                _this.addPageToPageCache(data, url);
+                res(data);
+            });
+        });
+    };
+    RequestConsistencyMiner.prototype.addPageToPageCache = function (obj, url) {
+        this.obsExpiringPageCache.next(obj);
+        this.pageCache[url] = obj;
+    };
+    RequestConsistencyMiner.prototype.deleteFile = function (path) {
+        return new Promise(function (res, rej) {
+            fs.unlink(path, function (err) {
+                if (err) {
+                    rej(err);
+                    return;
                 }
+                res();
             });
         });
     };
