@@ -62,7 +62,7 @@ export class RequestConsistencyMiner {
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses =  this.readIpList();
 
-        if(this.options.debug)
+        if(options.debug)
             console.log(`Databases:common:torRequest, startup ip list read from the disk, ${JSON.stringify(this.allUsedIpAddresses)}`);
 
         this.tcc = new TorClientControl(torClientOptions);
@@ -101,9 +101,9 @@ export class RequestConsistencyMiner {
                 .catch(()=> {
                     Fiber(() => {
                         let futureDate;
-                        if(oSource.diskTimeToLive) {
+                        if(oSource.diskTimeToLive)
                             futureDate = new Date(Date.now() + oSource.diskTimeToLive);
-                        }
+
 
                         let data =  this._torRequest(url);
 
