@@ -449,7 +449,7 @@ export class RequestConsistencyMiner {
         return new Promise((res, rej)=> {
             fs.readFile(dir, 'utf8', (err, readOnlyObj: any) => {
 
-                let obj = Object.assign({}, readOnlyObj);
+                let obj = Object.assign({}, JSON.parse(readOnlyObj));
 
                 if (err) {
                     if(this.options.debug)

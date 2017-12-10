@@ -14,11 +14,11 @@ let asycWrite = null;
 let asycContentsRead = false;
 let requestHeaders = null;
 
-function mockFs(contents: IPageCacheObj) {
+function mockFs(contents: string) {
   rewiremock('fs')
     .with({
       readFileSync: () => {
-        return contents;
+        return JSON.parse(contents);
       },
       writeFileSync: (path, data) => {
         syncWrite = data;
@@ -37,7 +37,7 @@ function mockFs(contents: IPageCacheObj) {
     });
 }
 
-function mockFs_emptyDisk(contents: IPageCacheObj) {
+function mockFs_emptyDisk(contents: string) {
   rewiremock('fs')
       .with({
         readFileSync: () => {
@@ -102,7 +102,7 @@ describe('testing all the different options', function () {
   });
 
 
-  let fileContents = {page: "this was read from the file"};
+  let fileContents = JSON.stringify({page: "this was read from the file"});
 
   var torClientOptions = {
     "debug": true,
@@ -234,7 +234,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page !== fileContents.page)
+          if (!page || page !== JSON.parse(fileContents).page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();
@@ -273,7 +273,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page !== fileContents.page)
+          if (!page || page !== JSON.parse(fileContents).page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();

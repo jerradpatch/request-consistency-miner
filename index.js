@@ -347,7 +347,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         }
         return new Promise(function (res, rej) {
             fs.readFile(dir, 'utf8', function (err, readOnlyObj) {
-                var obj = Object.assign({}, readOnlyObj);
+                var obj = Object.assign({}, JSON.parse(readOnlyObj));
                 if (err) {
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: could not read from disk, dir:" + dir + ", error:" + err);

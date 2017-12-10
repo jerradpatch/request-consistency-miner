@@ -14,7 +14,7 @@ function mockFs(contents) {
     rewiremock_1.default('fs')
         .with({
         readFileSync: function () {
-            return contents;
+            return JSON.parse(contents);
         },
         writeFileSync: function (path, data) {
             syncWrite = data;
@@ -91,7 +91,7 @@ describe('testing all the different options', function () {
         asycContentsRead = false;
         requestHeaders = null;
     });
-    var fileContents = { page: "this was read from the file" };
+    var fileContents = JSON.stringify({ page: "this was read from the file" });
     var torClientOptions = {
         "debug": true,
         "password": "LoveMaoMao1234",
@@ -202,7 +202,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page !== fileContents.page)
+                    if (!page || page !== JSON.parse(fileContents).page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
@@ -233,7 +233,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page !== fileContents.page)
+                    if (!page || page !== JSON.parse(fileContents).page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
