@@ -19,6 +19,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
         this.pageCache = {};
         this.obsExpiringPageCache = new Rx_1.Subject();
         this.gettingNewSession = false;
+        if (!options.storagePath)
+            throw new Error("Databases:common:torRequest:error no storagePath defined, storagePath: " + options.storagePath);
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses = this.readIpList();
         if (this.options.debug)

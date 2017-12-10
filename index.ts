@@ -54,6 +54,11 @@ export class RequestConsistencyMiner {
     private obsExpiringPageCache = new Subject<IPageCacheObj>();
 
     constructor(private options: IRCMOptions, private torClientOptions) {
+
+        if(!options.storagePath)
+            throw new Error(`Databases:common:torRequest:error no storagePath defined, storagePath: ${options.storagePath}`);
+
+
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses =  this.readIpList();
 
