@@ -200,7 +200,13 @@ export class RequestConsistencyMiner {
     private getSource(url: string): IRCMOptions_source {
         if(url) {
             let start = url.indexOf('//') + 2;
+            if(start < 0)
+                throw new Error(`Databases:common:getSource:error url did not contain a protocol, url: ${url}`);
+
             let end = url.indexOf('/', start);
+            if(end < 0)
+                end = url.length;
+
             let sourceString = url.slice(start, end);
             return this.options.sources[sourceString];
         }

@@ -145,7 +145,11 @@ var RequestConsistencyMiner = /** @class */ (function () {
     RequestConsistencyMiner.prototype.getSource = function (url) {
         if (url) {
             var start = url.indexOf('//') + 2;
+            if (start < 0)
+                throw new Error("Databases:common:getSource:error url did not contain a protocol, url: " + url);
             var end = url.indexOf('/', start);
+            if (end < 0)
+                end = url.length;
             var sourceString = url.slice(start, end);
             return this.options.sources[sourceString];
         }
