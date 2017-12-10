@@ -23,7 +23,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             throw new Error("Databases:common:torRequest:error no storagePath defined, storagePath: " + options.storagePath);
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses = this.readIpList();
-        if (this.options.debug)
+        if (options.debug)
             console.log("Databases:common:torRequest, startup ip list read from the disk, " + JSON.stringify(this.allUsedIpAddresses));
         this.tcc = new tor_request_1.TorClientControl(torClientOptions);
         this.tr = new tor_request_1.TorRequest();
@@ -57,9 +57,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 .catch(function () {
                 Fiber(function () {
                     var futureDate;
-                    if (oSource.diskTimeToLive) {
+                    if (oSource.diskTimeToLive)
                         futureDate = new Date(Date.now() + oSource.diskTimeToLive);
-                    }
                     var data = _this._torRequest(url);
                     return _this._writeUrlToDisk(url, { date: futureDate, page: data })
                         .then(function () {
@@ -310,6 +309,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
     };
     //DISK FUNCTIONALITY////////////////////////////
     RequestConsistencyMiner.prototype.readList = function (path) {
+        if (this.options.debug)
+            console.log("Databases:common:readList sync read from disk, path: " + path);
         try {
             var data = fs.readFileSync(path, { encoding: 'utf8' });
             return data && JSON.parse(data) || [];
@@ -320,12 +321,14 @@ var RequestConsistencyMiner = /** @class */ (function () {
         ;
     };
     RequestConsistencyMiner.prototype.writeList = function (path, list) {
+        if (this.options.debug)
+            console.log("Databases:common:torRequest: sync write to disk, path: " + path + ", list: " + list);
         try {
             fs.writeFileSync(path, JSON.stringify(list));
         }
         catch (e) {
             if (this.options.debug)
-                console.log("could not write list file, " + e);
+                console.log("Databases:common:torRequest: could not write list file, " + e);
         }
         ;
     };

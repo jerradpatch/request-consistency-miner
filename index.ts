@@ -401,6 +401,10 @@ export class RequestConsistencyMiner {
     //DISK FUNCTIONALITY////////////////////////////
 
     private readList(path: string) {
+
+        if(this.options.debug)
+            console.log(`Databases:common:readList sync read from disk, path: ${path}`);
+
         try {
             let data: string = fs.readFileSync(path, {encoding: 'utf8'});
             return data && JSON.parse(data) || [];
@@ -411,11 +415,15 @@ export class RequestConsistencyMiner {
 
 
     private writeList(path: string, list: IIpObj[]) {
+
+        if(this.options.debug)
+            console.log(`Databases:common:torRequest: sync write to disk, path: ${path}, list: ${list}`);
+
         try {
             fs.writeFileSync(path, JSON.stringify(list));
         } catch(e) {
             if(this.options.debug)
-                console.log(`could not write list file, ${e}`);
+                console.log(`Databases:common:torRequest: could not write list file, ${e}`);
         };
     }
 
