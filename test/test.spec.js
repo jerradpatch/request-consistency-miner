@@ -202,7 +202,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page.page !== fileContents.page)
+                    if (!page || page !== fileContents.page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
@@ -233,7 +233,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page.page !== fileContents.page)
+                    if (!page || page !== fileContents.page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
@@ -273,7 +273,7 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     //request page
-                    var page = rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest('http://' + sourceUrl + '/');
                     //check that the black list only contains the blacklisted IP
                     var blist = rcm.getIpBlackList();
                     if (!blist || blist.length != 1 || blist[0] !== blacklistedIp)
@@ -312,8 +312,8 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     //request page
-                    var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    page = rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest('http://' + sourceUrl + '/');
                     if (!rcmOptions._currentIpUse || rcmOptions._currentIpUse !== 1)
                         throw new Error("the number of new Ip's requested does not is not 1, rcmOptions._currentIpUse:" + rcmOptions._currentIpUse);
                     done();

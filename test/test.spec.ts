@@ -234,7 +234,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page !== fileContents)
+          if (!page || page !== fileContents.page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();
@@ -273,7 +273,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page !== fileContents)
+          if (!page || page !== fileContents.page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();

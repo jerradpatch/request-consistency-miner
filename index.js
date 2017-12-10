@@ -52,7 +52,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
-                fut_1.return(data);
+                fut_1.return(data.page);
             })
                 .catch(function () {
                 Fiber(function () {
