@@ -35,8 +35,9 @@ export declare class RequestConsistencyMiner {
     private pageCache;
     private obsExpiringPageCache;
     constructor(options: IRCMOptions, torClientOptions: any);
-    torRequest(url: any, recur?: number): string;
-    private _torRequest(url, recur?);
+    torRequest(url: any, bypassCache?: boolean): string;
+    static MAX_NEW_SESSIONS: number;
+    private _torRequest(url);
     private getSource(url);
     private whenIpOverUsed(oSource);
     private gettingNewSession;

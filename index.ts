@@ -34,6 +34,9 @@ export interface IPageCacheObj {
     page: string;
 };
 
+
+const MAX_NEW_SESSIONS = 100;
+
 export class RequestConsistencyMiner {
 
 
@@ -77,10 +80,10 @@ export class RequestConsistencyMiner {
     }
 
 
-    public torRequest(url, recur=0): string {
+    public torRequest(url, bypassCache=false): string {
         let oSource = this.getSource(url);
 
-        if(this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
+        if((this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) && !bypassCache) { //get from disk
 
             let fut = new Future();
             this._readUrlFromDisk(url)
@@ -94,7 +97,7 @@ export class RequestConsistencyMiner {
                             futureDate = new Date(Date.now() + oSource.diskTimeToLive);
                         }
 
-                        let data =  this._torRequest(url, recur);
+                        let data =  this._torRequest(url);
 
                         return this._writeUrlToDisk(url, {date:futureDate, page:data})
                             .then(() => {
@@ -108,24 +111,22 @@ export class RequestConsistencyMiner {
                 });
             return fut.wait();
         } else { //get from web
-            return this._torRequest(url, recur);
+            return this._torRequest(url);
         }
     }
 
-    private _torRequest(url, recur=0): string {
+    static MAX_NEW_SESSIONS = 100;
+
+    private _torRequest(url): string {
 
         var fut = new Future();
 
         if(this.options.debug)
             console.log(`Databases:common:torRequest: request started, url: ${url}`);
 
-        if(recur > 100) {
-            if(this.options.debug)
-                console.log(`Databases:common:torRequest:error: recur limit reached, url:${url}`);
-            return null;
-        }
-
         let oSource = this.getSource(url);
+
+        let newSessionCount = 0;
 
         this.whenIpOverUsed(oSource).then((initialIpAddress)=> {
             let ipAddress = initialIpAddress;
@@ -141,10 +142,19 @@ export class RequestConsistencyMiner {
                     if (this.options.debug)
                         console.error(`Databases:common:torRequest:error: new Session threw an error 1: err: ${err}`);
                 });
+                newSessionCount++;
             };
 
             function processRequest() {
                 this.tr.get(url, this.randomUserHeaders(oSource), (err, res, body) => {
+
+                    if(newSessionCount > MAX_NEW_SESSIONS){
+                        if (this.options.debug)
+                            console.error(`Databases:common:torRequest:error: the maximum attempt to get a new session was reached`);
+
+                        throw new Error(`Databases:common:torRequest:error: the maximum attempt to get a new session was reached, MAX_NEW_SESSIONS:${MAX_NEW_SESSIONS}`);
+                    }
+
                     if (!err && res.statusCode == 200) {
                         let pageSuccess = oSource.pageResponse(body, url, ipAddress);
 

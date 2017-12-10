@@ -8,6 +8,7 @@ var Rx_1 = require("rxjs/Rx");
 ;
 ;
 ;
+var MAX_NEW_SESSIONS = 100;
 var RequestConsistencyMiner = /** @class */ (function () {
     function RequestConsistencyMiner(options, torClientOptions) {
         var _this = this;
@@ -39,11 +40,11 @@ var RequestConsistencyMiner = /** @class */ (function () {
         });
         this.torNewSession();
     }
-    RequestConsistencyMiner.prototype.torRequest = function (url, recur) {
+    RequestConsistencyMiner.prototype.torRequest = function (url, bypassCache) {
         var _this = this;
-        if (recur === void 0) { recur = 0; }
+        if (bypassCache === void 0) { bypassCache = false; }
         var oSource = this.getSource(url);
-        if (this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) {
+        if ((this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) && !bypassCache) {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
@@ -55,7 +56,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     if (oSource.diskTimeToLive) {
                         futureDate = new Date(Date.now() + oSource.diskTimeToLive);
                     }
-                    var data = _this._torRequest(url, recur);
+                    var data = _this._torRequest(url);
                     return _this._writeUrlToDisk(url, { date: futureDate, page: data })
                         .then(function () {
                         fut_1.return(data);
@@ -69,21 +70,16 @@ var RequestConsistencyMiner = /** @class */ (function () {
             return fut_1.wait();
         }
         else {
-            return this._torRequest(url, recur);
+            return this._torRequest(url);
         }
     };
-    RequestConsistencyMiner.prototype._torRequest = function (url, recur) {
+    RequestConsistencyMiner.prototype._torRequest = function (url) {
         var _this = this;
-        if (recur === void 0) { recur = 0; }
         var fut = new Future();
         if (this.options.debug)
             console.log("Databases:common:torRequest: request started, url: " + url);
-        if (recur > 100) {
-            if (this.options.debug)
-                console.log("Databases:common:torRequest:error: recur limit reached, url:" + url);
-            return null;
-        }
         var oSource = this.getSource(url);
+        var newSessionCount = 0;
         this.whenIpOverUsed(oSource).then(function (initialIpAddress) {
             var ipAddress = initialIpAddress;
             function processNewSession() {
@@ -97,11 +93,17 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     if (_this.options.debug)
                         console.error("Databases:common:torRequest:error: new Session threw an error 1: err: " + err);
                 });
+                newSessionCount++;
             }
             ;
             function processRequest() {
                 var _this = this;
                 this.tr.get(url, this.randomUserHeaders(oSource), function (err, res, body) {
+                    if (newSessionCount > MAX_NEW_SESSIONS) {
+                        if (_this.options.debug)
+                            console.error("Databases:common:torRequest:error: the maximum attempt to get a new session was reached");
+                        throw new Error("Databases:common:torRequest:error: the maximum attempt to get a new session was reached, MAX_NEW_SESSIONS:" + MAX_NEW_SESSIONS);
+                    }
                     if (!err && res.statusCode == 200) {
                         var pageSuccess = oSource.pageResponse(body, url, ipAddress);
                         switch (pageSuccess) {
@@ -380,6 +382,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             });
         });
     };
+    RequestConsistencyMiner.MAX_NEW_SESSIONS = 100;
     return RequestConsistencyMiner;
 }());
 exports.RequestConsistencyMiner = RequestConsistencyMiner;
