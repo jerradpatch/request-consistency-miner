@@ -96,9 +96,15 @@ export class RequestConsistencyMiner {
             let fut = new Future();
             this._readUrlFromDisk(url)
                 .then((data: IPageCacheObj)=> {
+                    if(this.options.debug)
+                        console.log(`Databases:common:torRequest: file read from disk, keys: ${Object.keys(data)}`);
+
                     fut.return(data.page);
                 })
-                .catch(()=> {
+                .catch((e)=> {
+                    if(this.options.debug)
+                        console.log(`Databases:common:torRequest: file not read from disk, err: ${e}`);
+
                     Fiber(() => {
                         let futureDate;
                         if(oSource.diskTimeToLive)
@@ -451,7 +457,7 @@ export class RequestConsistencyMiner {
                     rej(err);
                 } else {
                     if(this.options.debug)
-                        console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}'`);
+                        console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
 
                     if(obj.date) {
                         let currentDateMills = Date.now();
@@ -497,9 +503,14 @@ export class RequestConsistencyMiner {
     }
 
     private deleteFile(path: string){
+        if(this.options.debug)
+            console.log(`Databases:common:deleteFile: requested file deletion, path: ${path}`);
+
         return new Promise((res,rej)=> {
             fs.unlink(path, function (err) {
                 if (err) {
+                    if(this.options.debug)
+                        console.log(`Databases:common:deleteFile: error deleting file, path: ${path}`);
                     rej(err);
                     return;
                 }

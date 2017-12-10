@@ -52,9 +52,13 @@ var RequestConsistencyMiner = /** @class */ (function () {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
+                if (_this.options.debug)
+                    console.log("Databases:common:torRequest: file read from disk, keys: " + Object.keys(data));
                 fut_1.return(data.page);
             })
-                .catch(function () {
+                .catch(function (e) {
+                if (_this.options.debug)
+                    console.log("Databases:common:torRequest: file not read from disk, err: " + e);
                 Fiber(function () {
                     var futureDate;
                     if (oSource.diskTimeToLive)
@@ -351,7 +355,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
                 else {
                     if (_this.options.debug)
-                        console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + "'");
+                        console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj) + "'");
                     if (obj.date) {
                         var currentDateMills = Date.now();
                         var savedDateMills = obj.date.getMilliseconds();
@@ -390,9 +394,13 @@ var RequestConsistencyMiner = /** @class */ (function () {
         this.pageCache[url] = obj;
     };
     RequestConsistencyMiner.prototype.deleteFile = function (path) {
+        if (this.options.debug)
+            console.log("Databases:common:deleteFile: requested file deletion, path: " + path);
         return new Promise(function (res, rej) {
             fs.unlink(path, function (err) {
                 if (err) {
+                    if (this.options.debug)
+                        console.log("Databases:common:deleteFile: error deleting file, path: " + path);
                     rej(err);
                     return;
                 }
