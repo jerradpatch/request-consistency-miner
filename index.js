@@ -21,7 +21,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         this.gettingNewSession = false;
         if (!options.storagePath)
             throw new Error("Databases:common:torRequest:error no storagePath defined, storagePath: " + options.storagePath);
-        this.ipStorageLocation = options.storagePath + '/ipStorage';
+        this.ipStorageLocation = options.storagePath + 'ipStorage';
         this.allUsedIpAddresses = this.readIpList();
         if (options.debug)
             console.log("Databases:common:torRequest, startup ip list read from the disk, " + JSON.stringify(this.allUsedIpAddresses));
@@ -48,7 +48,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var _this = this;
         if (bypassCache === void 0) { bypassCache = false; }
         var oSource = this.getSource(url);
-        if ((this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) && !bypassCache) {
+        if (this.options.debug || this.options.readFromDiskAlways || (oSource.diskTimeToLive && !bypassCache)) {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
@@ -322,7 +322,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
     };
     RequestConsistencyMiner.prototype.writeList = function (path, list) {
         if (this.options.debug)
-            console.log("Databases:common:torRequest: sync write to disk, path: " + path + ", list: " + list);
+            console.log("Databases:common:torRequest: sync write to disk, path: " + path + ", list: " + JSON.stringify(list));
         try {
             fs.writeFileSync(path, JSON.stringify(list));
         }
@@ -342,7 +342,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
             return Promise.resolve(this.pageCache[url]);
         }
         return new Promise(function (res, rej) {
-            fs.readFile(dir, 'utf8', function (err, obj) {
+            fs.readFile(dir, 'utf8', function (err, readOnlyObj) {
+                var obj = Object.assign({}, readOnlyObj);
                 if (err) {
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: could not read from disk, dir:" + dir + ", error:" + err);

@@ -202,7 +202,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page !== fileContents)
+                    if (!page || page.page !== fileContents.page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
@@ -233,7 +233,7 @@ describe('testing all the different options', function () {
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
                     var page = rcm.torRequest('http://' + sourceUrl + '/');
-                    if (!page || page !== fileContents)
+                    if (!page || page.page !== fileContents.page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();

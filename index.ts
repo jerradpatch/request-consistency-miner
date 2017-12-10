@@ -91,7 +91,7 @@ export class RequestConsistencyMiner {
     public torRequest(url, bypassCache=false): string {
         let oSource = this.getSource(url);
 
-        if((this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) && !bypassCache) { //get from disk
+        if(this.options.debug || this.options.readFromDiskAlways || (oSource.diskTimeToLive && !bypassCache)) { //get from disk
 
             let fut = new Future();
             this._readUrlFromDisk(url)
@@ -441,7 +441,10 @@ export class RequestConsistencyMiner {
         }
 
         return new Promise((res, rej)=> {
-            fs.readFile(dir, 'utf8', (err, obj: any) => {
+            fs.readFile(dir, 'utf8', (err, readOnlyObj: any) => {
+
+                let obj = Object.assign({}, readOnlyObj);
+
                 if (err) {
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: could not read from disk, dir:${dir}, error:${err}`);
