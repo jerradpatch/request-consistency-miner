@@ -161,15 +161,27 @@ export class RequestConsistencyMiner {
                         switch (pageSuccess) {
                             case 'true':
                                 this.options._currentIpUse++;
+
+                                if (this.options.debug)
+                                    console.error(`Databases:common:torRequest:error: page returned, currentIpUse:${this.options._currentIpUse}`);
+
                                 fut.return(body);
                                 break;
                             case 'blacklist':
                                 this.writeIpList(ipAddress);
+
+                                if (this.options.debug)
+                                    console.error(`Databases:common:torRequest:error: Ip added to the black list, blackList:${this.getIpBlackList()}`);
+
                                 processNewSession.call(this);
                                 break;
                             default:
                                 if(pageSuccess instanceof Date) {
                                     this.writeIpList(ipAddress, pageSuccess);
+
+                                    if (this.options.debug)
+                                        console.error(`Databases:common:torRequest:error: Ip added to the back off list, back-off list:${this.getIpBackoffList()}`);
+
                                     processNewSession.call(this);
                                 } else {
                                     throw new Error(`an invalid option was returned from options.${oSource}.pageResponse`);
