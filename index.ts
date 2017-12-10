@@ -59,7 +59,7 @@ export class RequestConsistencyMiner {
             throw new Error(`Databases:common:torRequest:error no storagePath defined, storagePath: ${options.storagePath}`);
 
 
-        this.ipStorageLocation = options.storagePath + '/ipStorage';
+        this.ipStorageLocation = options.storagePath + 'ipStorage';
         this.allUsedIpAddresses =  this.readIpList();
 
         if(options.debug)
@@ -417,7 +417,7 @@ export class RequestConsistencyMiner {
     private writeList(path: string, list: IIpObj[]) {
 
         if(this.options.debug)
-            console.log(`Databases:common:torRequest: sync write to disk, path: ${path}, list: ${list}`);
+            console.log(`Databases:common:torRequest: sync write to disk, path: ${path}, list: ${JSON.stringify(list)}`);
 
         try {
             fs.writeFileSync(path, JSON.stringify(list));
