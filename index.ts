@@ -96,7 +96,7 @@ export class RequestConsistencyMiner {
             let fut = new Future();
             this._readUrlFromDisk(url)
                 .then((data: IPageCacheObj)=> {
-                    fut.return(data);
+                    fut.return(data.page);
                 })
                 .catch(()=> {
                     Fiber(() => {

@@ -234,7 +234,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page.page !== fileContents.page)
+          if (!page || page !== fileContents)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();
@@ -273,7 +273,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let page = rcm.torRequest('http://' + sourceUrl + '/');
 
-          if (!page || page.page !== fileContents.page)
+          if (!page || page !== fileContents)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
 
           done();
@@ -323,7 +323,7 @@ describe('testing all the different options', function () {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
           //request page
-          let page = rcm.torRequest('http://' + sourceUrl + '/');
+          rcm.torRequest('http://' + sourceUrl + '/');
 
           //check that the black list only contains the blacklisted IP
           let blist = rcm.getIpBlackList();
@@ -373,8 +373,8 @@ describe('testing all the different options', function () {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
           //request page
-          let page = rcm.torRequest('http://' + sourceUrl + '/');
-          page = rcm.torRequest('http://' + sourceUrl + '/');
+          rcm.torRequest('http://' + sourceUrl + '/');
+          rcm.torRequest('http://' + sourceUrl + '/');
 
           if (!rcmOptions._currentIpUse || rcmOptions._currentIpUse !== 1) //one on constructor, one for second fet
             throw new Error(`the number of new Ip's requested does not is not 1, rcmOptions._currentIpUse:${rcmOptions._currentIpUse}`);
