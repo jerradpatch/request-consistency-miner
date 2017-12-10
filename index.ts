@@ -461,7 +461,7 @@ export class RequestConsistencyMiner {
 
                     if(obj.date) {
                         let currentDateMills = Date.now();
-                        let savedDateMills = obj.date.getMilliseconds();
+                        let savedDateMills = new Date(obj.date).getMilliseconds();
                         if (currentDateMills > savedDateMills) {
                             if(this.options.debug)
                                 console.log(`Databases:common:_readUrlFromDisk: file read from disk had a date that expired, dir: ${dir}`);

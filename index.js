@@ -358,7 +358,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                         console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj) + "'");
                     if (obj.date) {
                         var currentDateMills = Date.now();
-                        var savedDateMills = obj.date.getMilliseconds();
+                        var savedDateMills = new Date(obj.date).getMilliseconds();
                         if (currentDateMills > savedDateMills) {
                             if (_this.options.debug)
                                 console.log("Databases:common:_readUrlFromDisk: file read from disk had a date that expired, dir: " + dir);
