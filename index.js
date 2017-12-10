@@ -21,6 +21,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
         this.gettingNewSession = false;
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses = this.readIpList();
+        if (this.options.debug)
+            console.log("Databases:common:torRequest, startup ip list read from the disk, " + JSON.stringify(this.allUsedIpAddresses));
         this.tcc = new tor_request_1.TorClientControl(torClientOptions);
         this.tr = new tor_request_1.TorRequest();
         this.watchListStart(this.obsExpiringIpAddresses, function (obj) {
@@ -109,15 +111,21 @@ var RequestConsistencyMiner = /** @class */ (function () {
                         switch (pageSuccess) {
                             case 'true':
                                 _this.options._currentIpUse++;
+                                if (_this.options.debug)
+                                    console.error("Databases:common:torRequest page returned, currentIpUse:" + _this.options._currentIpUse);
                                 fut.return(body);
                                 break;
                             case 'blacklist':
                                 _this.writeIpList(ipAddress);
+                                if (_this.options.debug)
+                                    console.error("Databases:common:torRequest Ip added to the black list, blackList:" + _this.getIpBlackList());
                                 processNewSession.call(_this);
                                 break;
                             default:
                                 if (pageSuccess instanceof Date) {
                                     _this.writeIpList(ipAddress, pageSuccess);
+                                    if (_this.options.debug)
+                                        console.error("Databases:common:torRequest Ip added to the back off list, back-off list:" + _this.getIpBackoffList());
                                     processNewSession.call(_this);
                                 }
                                 else {
@@ -337,7 +345,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
                 else {
                     if (_this.options.debug)
-                        console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: " + dir);
+                        console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + "'");
                     if (obj.date) {
                         var currentDateMills = Date.now();
                         var savedDateMills = obj.date.getMilliseconds();

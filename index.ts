@@ -57,6 +57,9 @@ export class RequestConsistencyMiner {
         this.ipStorageLocation = options.storagePath + '/ipStorage';
         this.allUsedIpAddresses =  this.readIpList();
 
+        if(this.options.debug)
+            console.log(`Databases:common:torRequest, startup ip list read from the disk, ${JSON.stringify(this.allUsedIpAddresses)}`);
+
         this.tcc = new TorClientControl(torClientOptions);
         this.tr = new TorRequest();
 
@@ -163,7 +166,7 @@ export class RequestConsistencyMiner {
                                 this.options._currentIpUse++;
 
                                 if (this.options.debug)
-                                    console.error(`Databases:common:torRequest:error: page returned, currentIpUse:${this.options._currentIpUse}`);
+                                    console.error(`Databases:common:torRequest page returned, currentIpUse:${this.options._currentIpUse}`);
 
                                 fut.return(body);
                                 break;
@@ -171,7 +174,7 @@ export class RequestConsistencyMiner {
                                 this.writeIpList(ipAddress);
 
                                 if (this.options.debug)
-                                    console.error(`Databases:common:torRequest:error: Ip added to the black list, blackList:${this.getIpBlackList()}`);
+                                    console.error(`Databases:common:torRequest Ip added to the black list, blackList:${this.getIpBlackList()}`);
 
                                 processNewSession.call(this);
                                 break;
@@ -180,7 +183,7 @@ export class RequestConsistencyMiner {
                                     this.writeIpList(ipAddress, pageSuccess);
 
                                     if (this.options.debug)
-                                        console.error(`Databases:common:torRequest:error: Ip added to the back off list, back-off list:${this.getIpBackoffList()}`);
+                                        console.error(`Databases:common:torRequest Ip added to the back off list, back-off list:${this.getIpBackoffList()}`);
 
                                     processNewSession.call(this);
                                 } else {
@@ -432,7 +435,7 @@ export class RequestConsistencyMiner {
                     rej(err);
                 } else {
                     if(this.options.debug)
-                        console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: ${dir}`);
+                        console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}'`);
 
                     if(obj.date) {
                         let currentDateMills = Date.now();
