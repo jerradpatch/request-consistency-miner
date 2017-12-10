@@ -347,13 +347,13 @@ var RequestConsistencyMiner = /** @class */ (function () {
         }
         return new Promise(function (res, rej) {
             fs.readFile(dir, 'utf8', function (err, readOnlyObj) {
-                var obj = Object.assign({}, JSON.parse(readOnlyObj));
                 if (err) {
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: could not read from disk, dir:" + dir + ", error:" + err);
                     rej(err);
                 }
                 else {
+                    var obj = Object.assign({}, JSON.parse(readOnlyObj));
                     if (_this.options.debug)
                         console.log("Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj) + "'");
                     if (obj.date) {

@@ -449,17 +449,18 @@ export class RequestConsistencyMiner {
         return new Promise((res, rej)=> {
             fs.readFile(dir, 'utf8', (err, readOnlyObj: any) => {
 
-                let obj = Object.assign({}, JSON.parse(readOnlyObj));
-
                 if (err) {
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: could not read from disk, dir:${dir}, error:${err}`);
                     rej(err);
                 } else {
+                    let obj = Object.assign({}, JSON.parse(readOnlyObj));
+                    
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
 
                     if(obj.date) {
+
                         let currentDateMills = Date.now();
                         let savedDateMills = new Date(obj.date).getMilliseconds();
                         if (currentDateMills > savedDateMills) {
