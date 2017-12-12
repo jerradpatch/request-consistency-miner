@@ -11,9 +11,6 @@ export interface IRCMOptions {
     readFromDiskAlways?: boolean,
     ipUsageLimit?: number,
     _currentIpUse?: number;
-    sources: {
-        [source: string]: IRCMOptions_source
-    }
 };
 
 export interface IRCMOptions_source {
@@ -88,10 +85,14 @@ export class RequestConsistencyMiner {
     }
 
 
-    public torRequest(url, bypassCache=false): string {
-        let oSource = this.getSource(url);
+    public torRequest(oSource: IRCMOptions_source = {}): string {
 
-        if(this.options.debug || this.options.readFromDiskAlways || (oSource.diskTimeToLive && !bypassCache)) { //get from disk
+        if(!oSource.source || !oSource.pageResponse)
+            throw new Error(`the required properties of the 'IRCMOptions_source' were on set, oSource:${JSON.stringify(oSource)}`);
+
+        let url = oSource.source;
+
+        if(this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
 
             let fut = new Future();
             this._readUrlFromDisk(url)
@@ -106,14 +107,14 @@ export class RequestConsistencyMiner {
                         console.log(`Databases:common:torRequest: file not read from disk, err: ${e}`);
 
                     Fiber(() => {
-                        let futureDate;
-                        if(oSource.diskTimeToLive)
-                            futureDate = new Date(Date.now() + oSource.diskTimeToLive);
-
-
                         let data =  this._torRequest(url);
+                        let obj = {page:data};
 
-                        return this._writeUrlToDisk(url, {date:futureDate, page:data})
+                        if(oSource.diskTimeToLive) {
+                            obj[date]  = new Date(Date.now() + oSource.diskTimeToLive);
+                        }
+
+                        return this._writeUrlToDisk(url, obj)
                             .then(() => {
                                 fut.return(data);
                             }, (err) => {
@@ -125,20 +126,20 @@ export class RequestConsistencyMiner {
                 });
             return fut.wait();
         } else { //get from web
-            return this._torRequest(url);
+            return this._torRequest(url, oSource);
         }
     }
 
     static MAX_NEW_SESSIONS = 100;
 
-    private _torRequest(url): string {
+    private _torRequest(oSource: IRCMOptions_source = {}): string {
 
-        var fut = new Future();
+        let url = oSource.source;
+
+        let fut = new Future();
 
         if(this.options.debug)
             console.log(`Databases:common:torRequest: request started, url: ${url}`);
-
-        let oSource = this.getSource(url);
 
         let newSessionCount = 0;
 
@@ -223,21 +224,21 @@ export class RequestConsistencyMiner {
         return page;
     }
 
-    private getSource(url: string): IRCMOptions_source {
-        if(url) {
-            let start = url.indexOf('//') + 2;
-            if(start < 0)
-                throw new Error(`Databases:common:getSource:error url did not contain a protocol, url: ${url}`);
-
-            let end = url.indexOf('/', start);
-            if(end < 0)
-                end = url.length;
-
-            let sourceString = url.slice(start, end);
-            return this.options.sources[sourceString];
-        }
-        throw new Error(`Databases:common:getSource:error url is not in the correct format, or no url was given, url: ${url}`)
-    }
+    // private getSource(url: string): IRCMOptions_source {
+    //     if(url) {
+    //         let start = url.indexOf('//') + 2;
+    //         if(start < 0)
+    //             throw new Error(`Databases:common:getSource:error url did not contain a protocol, url: ${url}`);
+    //
+    //         let end = url.indexOf('/', start);
+    //         if(end < 0)
+    //             end = url.length;
+    //
+    //         let sourceString = url.slice(start, end);
+    //         return this.options.sources[sourceString];
+    //     }
+    //     throw new Error(`Databases:common:getSource:error url is not in the correct format, or no url was given, url: ${url}`)
+    // }
 
     private whenIpOverUsed(oSource: IRCMOptions_source): Promise<any> {
         let ops = this.options;
@@ -455,7 +456,7 @@ export class RequestConsistencyMiner {
                     rej(err);
                 } else {
                     let obj = Object.assign({}, JSON.parse(readOnlyObj));
-                    
+
                     if(this.options.debug)
                         console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
 
