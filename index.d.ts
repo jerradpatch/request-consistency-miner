@@ -4,9 +4,6 @@ export interface IRCMOptions {
     readFromDiskAlways?: boolean;
     ipUsageLimit?: number;
     _currentIpUse?: number;
-    sources: {
-        [source: string]: IRCMOptions_source;
-    };
 }
 export interface IRCMOptions_source {
     source: string;
@@ -35,10 +32,9 @@ export declare class RequestConsistencyMiner {
     private pageCache;
     private obsExpiringPageCache;
     constructor(options: IRCMOptions, torClientOptions: any);
-    torRequest(url: any, bypassCache?: boolean): string;
+    torRequest(oSource: IRCMOptions_source): string;
     static MAX_NEW_SESSIONS: number;
-    private _torRequest(url);
-    private getSource(url);
+    private _torRequest(oSource);
     private whenIpOverUsed(oSource);
     private gettingNewSession;
     private torNewSession();

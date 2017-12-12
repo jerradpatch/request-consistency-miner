@@ -44,11 +44,12 @@ var RequestConsistencyMiner = /** @class */ (function () {
         });
         this.torNewSession();
     }
-    RequestConsistencyMiner.prototype.torRequest = function (url, bypassCache) {
+    RequestConsistencyMiner.prototype.torRequest = function (oSource) {
         var _this = this;
-        if (bypassCache === void 0) { bypassCache = false; }
-        var oSource = this.getSource(url);
-        if (this.options.debug || this.options.readFromDiskAlways || (oSource.diskTimeToLive && !bypassCache)) {
+        if (!oSource || !oSource.source || !oSource.pageResponse)
+            throw new Error("the required properties of the 'IRCMOptions_source' were not set, oSource:" + JSON.stringify(oSource));
+        var url = oSource.source;
+        if (this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
@@ -60,11 +61,12 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 if (_this.options.debug)
                     console.log("Databases:common:torRequest: file not read from disk, err: " + e);
                 Fiber(function () {
-                    var futureDate;
-                    if (oSource.diskTimeToLive)
-                        futureDate = new Date(Date.now() + oSource.diskTimeToLive);
-                    var data = _this._torRequest(url);
-                    return _this._writeUrlToDisk(url, { date: futureDate, page: data })
+                    var data = _this._torRequest(oSource);
+                    var obj = { page: data };
+                    if (oSource.diskTimeToLive) {
+                        obj['date'] = new Date(Date.now() + oSource.diskTimeToLive);
+                    }
+                    return _this._writeUrlToDisk(url, obj)
                         .then(function () {
                         fut_1.return(data);
                     }, function (err) {
@@ -77,15 +79,15 @@ var RequestConsistencyMiner = /** @class */ (function () {
             return fut_1.wait();
         }
         else {
-            return this._torRequest(url);
+            return this._torRequest(oSource);
         }
     };
-    RequestConsistencyMiner.prototype._torRequest = function (url) {
+    RequestConsistencyMiner.prototype._torRequest = function (oSource) {
         var _this = this;
+        var url = oSource.source;
         var fut = new Future();
         if (this.options.debug)
             console.log("Databases:common:torRequest: request started, url: " + url);
-        var oSource = this.getSource(url);
         var newSessionCount = 0;
         this.whenIpOverUsed(oSource).then(function (initialIpAddress) {
             var ipAddress = initialIpAddress;
@@ -155,19 +157,21 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var page = fut.wait();
         return page;
     };
-    RequestConsistencyMiner.prototype.getSource = function (url) {
-        if (url) {
-            var start = url.indexOf('//') + 2;
-            if (start < 0)
-                throw new Error("Databases:common:getSource:error url did not contain a protocol, url: " + url);
-            var end = url.indexOf('/', start);
-            if (end < 0)
-                end = url.length;
-            var sourceString = url.slice(start, end);
-            return this.options.sources[sourceString];
-        }
-        throw new Error("Databases:common:getSource:error url is not in the correct format, or no url was given, url: " + url);
-    };
+    // private getSource(url: string): IRCMOptions_source {
+    //     if(url) {
+    //         let start = url.indexOf('//') + 2;
+    //         if(start < 0)
+    //             throw new Error(`Databases:common:getSource:error url did not contain a protocol, url: ${url}`);
+    //
+    //         let end = url.indexOf('/', start);
+    //         if(end < 0)
+    //             end = url.length;
+    //
+    //         let sourceString = url.slice(start, end);
+    //         return this.options.sources[sourceString];
+    //     }
+    //     throw new Error(`Databases:common:getSource:error url is not in the correct format, or no url was given, url: ${url}`)
+    // }
     RequestConsistencyMiner.prototype.whenIpOverUsed = function (oSource) {
         var ops = this.options;
         if (ops.ipUsageLimit && ops.ipUsageLimit <= ops._currentIpUse) {

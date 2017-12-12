@@ -156,15 +156,7 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: true,
                 readFromDiskAlways: false,
-                ipUsageLimit: 20,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        diskTimeToLive: 60 * 1000,
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: isPageSuccessful
-                    },
-                    _a)
+                ipUsageLimit: 20
             });
             var path = rcmOptions.storagePath;
             mkdirp(path, function (err) {
@@ -176,7 +168,6 @@ describe('testing all the different options', function () {
                     done();
                 });
             });
-            var _a;
         });
     });
     describe('readFromDiskWhenDebug, should read from disk when debug is set true', function () {
@@ -184,16 +175,14 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: true,
                 readFromDiskAlways: false,
-                ipUsageLimit: 20,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        diskTimeToLive: 60 * 1000,
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: isPageSuccessful
-                    },
-                    _a)
+                ipUsageLimit: 20
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                diskTimeToLive: 60 * 1000,
+                requestHeaders: randomUserHeaders,
+                pageResponse: isPageSuccessful
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 mockTR([""]);
@@ -201,14 +190,13 @@ describe('testing all the different options', function () {
                 var RCM = require('../index');
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
-                    var page = rcm.torRequest('http://' + sourceUrl + '/');
+                    var page = rcm.torRequest(paramOptions);
                     if (!page || page !== JSON.parse(fileContents).page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
                 rewiremock_1.default.disable();
             });
-            var _a;
         });
     });
     describe('readFromDiskWhenDebug, should not read from disk when debug is set false', function () {
@@ -216,30 +204,27 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 20,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        diskTimeToLive: 60 * 1000,
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: isPageSuccessful
-                    },
-                    _a)
+                ipUsageLimit: 20
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                diskTimeToLive: 60 * 1000,
+                requestHeaders: randomUserHeaders,
+                pageResponse: isPageSuccessful
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 rewiremock_1.default.enable();
                 var RCM = require('../index');
                 var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 Fiber(function () {
-                    var page = rcm.torRequest('http://' + sourceUrl + '/');
+                    var page = rcm.torRequest(paramOptions);
                     if (!page || page !== JSON.parse(fileContents).page)
                         throw new Error("the file contents did not match the page fetched, pageReturned: " + page);
                     done();
                 }).run();
                 rewiremock_1.default.disable();
             });
-            var _a;
         });
     });
     describe('source.ipBlackList, should ask for a new IP when function returns "blacklisted" ', function () {
@@ -248,22 +233,20 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 20,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            if (ipAddress === blacklistedIp) {
-                                return "blacklist";
-                            }
-                            else {
-                                return 'true';
-                            }
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 20
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    if (ipAddress === blacklistedIp) {
+                        return "blacklist";
+                    }
+                    else {
+                        return 'true';
+                    }
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 //set currentIp
@@ -273,7 +256,7 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     //request page
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     //check that the black list only contains the blacklisted IP
                     var blist = rcm.getIpBlackList();
                     if (!blist || blist.length != 1 || blist[0] !== blacklistedIp)
@@ -284,7 +267,6 @@ describe('testing all the different options', function () {
                 }).run();
                 rewiremock_1.default.disable();
             });
-            var _a;
         });
     });
     describe('source.ipUsageLimit, should ask for a new Ip address after resource request limit/backoff reached', function () {
@@ -292,17 +274,15 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 1,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            return 'true';
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 1
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    return 'true';
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 //set currentIp
@@ -312,15 +292,14 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     //request page
-                    rcm.torRequest('http://' + sourceUrl + '/');
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
+                    rcm.torRequest(paramOptions);
                     if (!rcmOptions._currentIpUse || rcmOptions._currentIpUse !== 1)
                         throw new Error("the number of new Ip's requested does not is not 1, rcmOptions._currentIpUse:" + rcmOptions._currentIpUse);
                     done();
                 }).run();
                 rewiremock_1.default.disable();
             });
-            var _a;
         });
     });
     describe('source.ipUsageLimit, after usage limit reached it should add ip to backoff list and set a timeout', function () {
@@ -331,22 +310,20 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 1,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            if (ipAddress === backOffIp) {
-                                return new Date(Date.now() + ipBackoffTimeout);
-                            }
-                            else {
-                                return 'true';
-                            }
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 1
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    if (ipAddress === backOffIp) {
+                        return new Date(Date.now() + ipBackoffTimeout);
+                    }
+                    else {
+                        return 'true';
+                    }
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 //set currentIp
@@ -356,7 +333,7 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     //request page
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     var backOffIps = rcm.getIpBackoffList();
                     if (backOffIps.length !== 1 && backOffIps[0] !== backOffIp)
                         throw new Error("backoff IpAddresses are not the count expected, expected 1, actual=" + (backOffIps && backOffIps.length));
@@ -369,7 +346,6 @@ describe('testing all the different options', function () {
                 }).run();
                 rewiremock_1.default.disable();
             });
-            var _a;
         });
     });
     describe('source.ipUsageLimit, after usage limit reached and set timeout expires, it should reuse previous IP address', function () {
@@ -382,26 +358,24 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 100,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            currentIp = ipAddress;
-                            var ret;
-                            if (requestCount === 0 || requestCount === 1) {
-                                ret = new Date(Date.now() + ipBackoffTimeout);
-                            }
-                            else {
-                                ret = 'true';
-                            }
-                            requestCount++;
-                            return ret;
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 100
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    currentIp = ipAddress;
+                    var ret;
+                    if (requestCount === 0 || requestCount === 1) {
+                        ret = new Date(Date.now() + ipBackoffTimeout);
+                    }
+                    else {
+                        ret = 'true';
+                    }
+                    requestCount++;
+                    return ret;
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs(fileContents);
                 //set currentIp
@@ -413,7 +387,7 @@ describe('testing all the different options', function () {
                     //request page
                     //it will backoff first, back off second, keep getting first, until timer, ticks and removes first, then it
                     // it will complete and return
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     if (requestCount !== 3)
                         throw new Error("requestCount, expected:3, actual:" + requestCount);
                     if (currentIp !== firstIp)
@@ -422,7 +396,6 @@ describe('testing all the different options', function () {
                     rewiremock_1.default.disable();
                 }).run();
             });
-            var _a;
         });
     });
     describe('source.diskTimeToLive, after a request is made, the request should be persisted to the disk space with a time to live set', function () {
@@ -430,18 +403,16 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 100,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        diskTimeToLive: 1000,
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            return 'true';
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 100
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                diskTimeToLive: 1000,
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    return 'true';
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs_emptyDisk(fileContents);
                 //set currentIp
@@ -450,7 +421,7 @@ describe('testing all the different options', function () {
                 var RCM = require('../index');
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     //timeout for async event to complete
                     setTimeout(function () {
                         var diskObj = JSON.parse(asycWrite);
@@ -461,7 +432,6 @@ describe('testing all the different options', function () {
                     }, 500);
                 }).run();
             });
-            var _a;
         });
     });
     describe('source.diskTimeToLive, the request should return a different page after the disk time-to-live expired', function () {
@@ -471,18 +441,16 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 100,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: 'sourceUrl',
-                        diskTimeToLive: 1000,
-                        requestHeaders: randomUserHeaders,
-                        pageResponse: function (body, url, ipAddress) {
-                            return 'true';
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 100
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                diskTimeToLive: 1000,
+                requestHeaders: randomUserHeaders,
+                pageResponse: function (body, url, ipAddress) {
+                    return 'true';
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs_emptyDisk(null);
                 //set currentIp
@@ -491,7 +459,7 @@ describe('testing all the different options', function () {
                 var RCM = require('../index');
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     if (!asycContentsRead)
                         throw new Error("asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:" + asycContentsRead);
                     setTimeout(function () {
@@ -507,7 +475,6 @@ describe('testing all the different options', function () {
                     }, 0);
                 }).run();
             });
-            var _a;
         });
     });
     describe('source.requestHeaders, a request should be made with the given headers', function () {
@@ -516,19 +483,17 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 100,
-                sources: (_a = {},
-                    _a[sourceUrl] = {
-                        source: sourceUrl,
-                        requestHeaders: function () {
-                            return expectedHeaders;
-                        },
-                        pageResponse: function (body, url, ipAddress) {
-                            return 'true';
-                        }
-                    },
-                    _a)
+                ipUsageLimit: 100
             });
+            var paramOptions = {
+                source: 'http://' + sourceUrl + '/',
+                requestHeaders: function () {
+                    return expectedHeaders;
+                },
+                pageResponse: function (body, url, ipAddress) {
+                    return 'true';
+                }
+            };
             rewiremock_1.default.inScope(function () {
                 mockFs_emptyDisk(null);
                 //set currentIp
@@ -537,7 +502,7 @@ describe('testing all the different options', function () {
                 var RCM = require('../index');
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
-                    rcm.torRequest('http://' + sourceUrl + '/');
+                    rcm.torRequest(paramOptions);
                     var eSt = JSON.stringify(expectedHeaders);
                     var rSt = JSON.stringify(requestHeaders);
                     if (eSt !== rSt)
@@ -546,7 +511,6 @@ describe('testing all the different options', function () {
                     done();
                 }).run();
             });
-            var _a;
         });
     });
 });

@@ -207,7 +207,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         diskTimeToLive: 60 * 1000,
         requestHeaders: randomUserHeaders,
         pageResponse: isPageSuccessful
@@ -223,7 +223,7 @@ describe('testing all the different options', function () {
         let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
         Fiber(() => {
-          let page = rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          let page = rcm.torRequest(paramOptions);
 
           if (!page || page !== JSON.parse(fileContents).page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
@@ -247,7 +247,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         diskTimeToLive: 60 * 1000,
         requestHeaders: randomUserHeaders,
         pageResponse: isPageSuccessful
@@ -261,7 +261,7 @@ describe('testing all the different options', function () {
         let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
         Fiber(() => {
-          let page = rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          let page = rcm.torRequest(paramOptions);
 
           if (!page || page !== JSON.parse(fileContents).page)
             throw new Error(`the file contents did not match the page fetched, pageReturned: ${page}`);
@@ -287,7 +287,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         requestHeaders: randomUserHeaders,
         pageResponse: (body: string, url: string, ipAddress: string): string =>{
           if(ipAddress === blacklistedIp) {
@@ -311,7 +311,7 @@ describe('testing all the different options', function () {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
           //request page
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           //check that the black list only contains the blacklisted IP
           let blist = rcm.getIpBlackList();
@@ -340,13 +340,11 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        [sourceUrl]: {
-          source:sourceUrl,
+          source:'http://' + sourceUrl + '/',
           requestHeaders: randomUserHeaders,
-          pageResponse: (body: string, url: string, ipAddress: string): string =>{
+          pageResponse: (body: string, url: string, ipAddress: string): string => {
             return 'true';
           }
-        }
       }
 
       rewiremock.inScope(() => {
@@ -362,8 +360,8 @@ describe('testing all the different options', function () {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
           //request page
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
+          rcm.torRequest(paramOptions);
 
           if (!rcmOptions._currentIpUse || rcmOptions._currentIpUse !== 1) //one on constructor, one for second fet
             throw new Error(`the number of new Ip's requested does not is not 1, rcmOptions._currentIpUse:${rcmOptions._currentIpUse}`);
@@ -390,7 +388,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         requestHeaders: randomUserHeaders,
         pageResponse: (body: string, url: string, ipAddress: string): Date| string =>{
 
@@ -415,7 +413,7 @@ describe('testing all the different options', function () {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
           //request page
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           let backOffIps = rcm.getIpBackoffList();
           if (backOffIps.length !== 1 && backOffIps[0] !== backOffIp) //one on constructor, one for second fet
@@ -451,23 +449,21 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        [sourceUrl]: {
-          source:sourceUrl,
-          requestHeaders: randomUserHeaders,
-          pageResponse: (body: string, url: string, ipAddress: string): Date| string =>{
+        source:'http://' + sourceUrl + '/',
+        requestHeaders: randomUserHeaders,
+        pageResponse: (body: string, url: string, ipAddress: string): Date| string =>{
 
-            currentIp = ipAddress;
+          currentIp = ipAddress;
 
-            let ret;
-            if(requestCount === 0 || requestCount === 1) {
-              ret = new Date(Date.now() + ipBackoffTimeout);
-            } else {
-              ret =  'true';
-            }
-
-            requestCount++;
-            return ret;
+          let ret;
+          if(requestCount === 0 || requestCount === 1) {
+            ret = new Date(Date.now() + ipBackoffTimeout);
+          } else {
+            ret =  'true';
           }
+
+          requestCount++;
+          return ret;
         }
       }
 
@@ -486,7 +482,7 @@ describe('testing all the different options', function () {
           //request page
           //it will backoff first, back off second, keep getting first, until timer, ticks and removes first, then it
           // it will complete and return
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           if (requestCount !== 3)
             throw new Error(`requestCount, expected:3, actual:${requestCount}`);
@@ -511,14 +507,12 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        [sourceUrl]: {
-          source:sourceUrl,
+          source:'http://' + sourceUrl + '/',
           diskTimeToLive: 1000,
           requestHeaders: randomUserHeaders,
           pageResponse: (body: string, url: string, ipAddress: string): Date| string => {
             return 'true';
           }
-        }
       }
 
       rewiremock.inScope(() => {
@@ -533,7 +527,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           //timeout for async event to complete
           setTimeout(()=>{
@@ -562,7 +556,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         diskTimeToLive: 1000,
         requestHeaders: randomUserHeaders,
         pageResponse: (body: string, url: string, ipAddress: string): Date| string => {
@@ -584,7 +578,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           if (!asycContentsRead)
             throw new Error(`asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:${asycContentsRead}`);
@@ -621,7 +615,7 @@ describe('testing all the different options', function () {
       });
 
       let paramOptions = {
-        source:sourceUrl,
+        source:'http://' + sourceUrl + '/',
         requestHeaders: ()=>{
           return expectedHeaders;
         },
@@ -643,7 +637,7 @@ describe('testing all the different options', function () {
         Fiber(() => {
           let rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
 
-          rcm.torRequest('http://' + sourceUrl + '/', paramOptions);
+          rcm.torRequest(paramOptions);
 
           let eSt =JSON.stringify(expectedHeaders);
           let rSt = JSON.stringify(requestHeaders);

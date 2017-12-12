@@ -85,10 +85,10 @@ export class RequestConsistencyMiner {
     }
 
 
-    public torRequest(oSource: IRCMOptions_source = {}): string {
+    public torRequest(oSource: IRCMOptions_source): string {
 
-        if(!oSource.source || !oSource.pageResponse)
-            throw new Error(`the required properties of the 'IRCMOptions_source' were on set, oSource:${JSON.stringify(oSource)}`);
+        if(!oSource || !oSource.source || !oSource.pageResponse)
+            throw new Error(`the required properties of the 'IRCMOptions_source' were not set, oSource:${JSON.stringify(oSource)}`);
 
         let url = oSource.source;
 
@@ -107,11 +107,11 @@ export class RequestConsistencyMiner {
                         console.log(`Databases:common:torRequest: file not read from disk, err: ${e}`);
 
                     Fiber(() => {
-                        let data =  this._torRequest(url);
+                        let data =  this._torRequest(oSource);
                         let obj = {page:data};
 
                         if(oSource.diskTimeToLive) {
-                            obj[date]  = new Date(Date.now() + oSource.diskTimeToLive);
+                            obj['date']  = new Date(Date.now() + oSource.diskTimeToLive);
                         }
 
                         return this._writeUrlToDisk(url, obj)
@@ -126,13 +126,13 @@ export class RequestConsistencyMiner {
                 });
             return fut.wait();
         } else { //get from web
-            return this._torRequest(url, oSource);
+            return this._torRequest(oSource);
         }
     }
 
     static MAX_NEW_SESSIONS = 100;
 
-    private _torRequest(oSource: IRCMOptions_source = {}): string {
+    private _torRequest(oSource: IRCMOptions_source): string {
 
         let url = oSource.source;
 
