@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var mkdirp = require("mkdirp");
-var fs = require("fs");
 var Fiber = require("fibers/fibers");
 var Rx_1 = require("rxjs/Rx");
+var index_1 = require("../index");
 var rewiremock_1 = require("rewiremock");
 //setup mocks
 var syncWrite = null;
@@ -91,6 +90,9 @@ describe('testing all the different options', function () {
         asycContentsRead = false;
         requestHeaders = null;
     });
+    afterEach(function () {
+        rewiremock_1.default.disable();
+    });
     var fileContents = JSON.stringify({ page: "this was read from the file" });
     var torClientOptions = {
         "debug": true,
@@ -151,25 +153,28 @@ describe('testing all the different options', function () {
         };
         return headers;
     }
-    describe('storageUrl, storage folder should be set with read and write permissions', function () {
-        it('should return without error', function (done) {
-            var rcmOptions = createRcmOptions({
-                debug: true,
-                readFromDiskAlways: false,
-                ipUsageLimit: 20
-            });
-            var path = rcmOptions.storagePath;
-            mkdirp(path, function (err) {
-                if (err)
-                    throw new Error("couldnt create directory");
-                fs.access(path, fs.constants.R_OK | fs.constants.W_OK, function (err) {
-                    if (err)
-                        throw new Error("read and write permissions are needed on storagePath");
-                    done();
-                });
-            });
-        });
-    });
+    // describe('storageUrl, storage folder should be set with read and write permissions', function () {
+    //   it('should return without error', function (done) {
+    //     let rcmOptions = createRcmOptions({
+    //       debug: true,
+    //       readFromDiskAlways: false,
+    //       ipUsageLimit: 20
+    //     });
+    //
+    //     var path = rcmOptions.storagePath;
+    //
+    //     mkdirp(path, function (err) {
+    //       if (err)
+    //         throw new Error("couldnt create directory");
+    //
+    //       fs.access(path, fs.constants.R_OK | fs.constants.W_OK, function(err) {
+    //         if(err)
+    //           throw new Error("read and write permissions are needed on storagePath");
+    //         done();
+    //       });
+    //     });
+    //   });
+    // });
     describe('readFromDiskWhenDebug, should read from disk when debug is set true', function () {
         it('should return without error', function (done) {
             var rcmOptions = createRcmOptions({
@@ -483,7 +488,7 @@ describe('testing all the different options', function () {
             var rcmOptions = createRcmOptions({
                 debug: false,
                 readFromDiskAlways: false,
-                ipUsageLimit: 100
+                ipUsageLimit: 100,
             });
             var paramOptions = {
                 source: 'http://' + sourceUrl + '/',
@@ -511,6 +516,47 @@ describe('testing all the different options', function () {
                     done();
                 }).run();
             });
+        });
+    });
+    describe('torNewSession: all promises (when resolved) should end with same Ip address. The next promise should have different Ip Address', function () {
+        it('should return without error', function (done) {
+            var rcmOptions = createRcmOptions({
+                debug: true,
+                readFromDiskAlways: false,
+                ipUsageLimit: 100
+            });
+            Fiber(function () {
+                var rcm = new index_1.RequestConsistencyMiner(rcmOptions, torClientOptions);
+                var reqs = [];
+                for (var i = 0; i < 20; ++i) {
+                    reqs.push(rcm.torNewSession());
+                }
+                return Promise.all(reqs)
+                    .then(function (ips) {
+                    var firstIp = ips.reduce(function (p, c) {
+                        if (p !== c) {
+                            throw new Error('the first ip array was not completely equal');
+                        }
+                        return p;
+                    });
+                    reqs = [];
+                    for (var i = 0; i < 20; ++i) {
+                        reqs.push(rcm.torNewSession());
+                    }
+                    return Promise.all(reqs)
+                        .then(function (ips) {
+                        var secondIp = ips.reduce(function (p, c) {
+                            if (p !== c) {
+                                throw new Error('the second ip array was not completely equal');
+                            }
+                            return p;
+                        });
+                        if (firstIp === secondIp)
+                            throw new Error("did not fetch a new Ip, firstIp:" + firstIp + ", secondIp:" + secondIp);
+                        done();
+                    });
+                });
+            }).run();
         });
     });
 });
