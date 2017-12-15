@@ -255,7 +255,7 @@ export class RequestConsistencyMiner {
     }
 
     private gettingNewSession: boolean = false;
-    private torNewSession(): Promise<any> {
+    public torNewSession(): Promise<any> {
 
         if(!this.gettingNewSession) {
             this.gettingNewSession = true;

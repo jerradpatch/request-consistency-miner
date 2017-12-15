@@ -37,7 +37,7 @@ export declare class RequestConsistencyMiner {
     private _torRequest(oSource);
     private whenIpOverUsed(oSource);
     private gettingNewSession;
-    private torNewSession();
+    torNewSession(): Promise<any>;
     private newIpUntilUnused();
     private ifIpAlreadyUsed(ipAddress);
     private randomUserHeaders(oSource);
