@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as Fiber from 'fibers/fibers';
 import {Subject, Observable} from 'rxjs/Rx';
 import {IRCMOptions_source, IPageCacheObj} from "../index";
-
+import {RequestConsistencyMiner} from '../index'
 import rewiremock from 'rewiremock';
 
 
@@ -101,6 +101,9 @@ describe('testing all the different options', function () {
     requestHeaders = null;
   });
 
+  afterEach( () =>{
+    rewiremock.disable();
+  });
 
   let fileContents = JSON.stringify({page: "this was read from the file"});
 
@@ -174,28 +177,28 @@ describe('testing all the different options', function () {
   }
 
 
-  describe('storageUrl, storage folder should be set with read and write permissions', function () {
-    it('should return without error', function (done) {
-      let rcmOptions = createRcmOptions({
-        debug: true,
-        readFromDiskAlways: false,
-        ipUsageLimit: 20
-      });
-
-      var path = rcmOptions.storagePath;
-
-      mkdirp(path, function (err) {
-        if (err)
-          throw new Error("couldnt create directory");
-
-        fs.access(path, fs.constants.R_OK | fs.constants.W_OK, function(err) {
-          if(err)
-            throw new Error("read and write permissions are needed on storagePath");
-          done();
-        });
-      });
-    });
-  });
+  // describe('storageUrl, storage folder should be set with read and write permissions', function () {
+  //   it('should return without error', function (done) {
+  //     let rcmOptions = createRcmOptions({
+  //       debug: true,
+  //       readFromDiskAlways: false,
+  //       ipUsageLimit: 20
+  //     });
+  //
+  //     var path = rcmOptions.storagePath;
+  //
+  //     mkdirp(path, function (err) {
+  //       if (err)
+  //         throw new Error("couldnt create directory");
+  //
+  //       fs.access(path, fs.constants.R_OK | fs.constants.W_OK, function(err) {
+  //         if(err)
+  //           throw new Error("read and write permissions are needed on storagePath");
+  //         done();
+  //       });
+  //     });
+  //   });
+  // });
 
   describe('readFromDiskWhenDebug, should read from disk when debug is set true', function () {
     it('should return without error', function (done) {
@@ -611,7 +614,7 @@ describe('testing all the different options', function () {
       let rcmOptions = createRcmOptions({
         debug: false,
         readFromDiskAlways: false,
-        ipUsageLimit: 100
+        ipUsageLimit: 100,
       });
 
       let paramOptions = {
@@ -652,4 +655,58 @@ describe('testing all the different options', function () {
     });
   });
 
+  describe('torNewSession: all promises (when resolved) should end with same Ip address. The next promise should have different Ip Address', function () {
+    it('should return without error', function (done) {
+
+      let rcmOptions = createRcmOptions({
+        debug: true,
+        readFromDiskAlways: false,
+        ipUsageLimit: 100
+      });
+
+      Fiber(() => {
+
+
+        let rcm = new RequestConsistencyMiner(rcmOptions, torClientOptions);
+
+        let reqs = [];
+
+        for(var i = 0; i < 20; ++i) {
+          reqs.push(rcm.torNewSession());
+        }
+
+        return Promise.all(reqs)
+          .then((ips)=>{
+            let firstIp = ips.reduce((p,c)=>{
+              if(p !== c){
+                throw new Error('the first ip array was not completely equal')
+              }
+              return p;
+            });
+
+
+            reqs = [];
+
+            for(var i = 0; i < 20; ++i) {
+              reqs.push(rcm.torNewSession());
+            }
+
+            return Promise.all(reqs)
+                .then((ips)=>{
+                  let secondIp = ips.reduce((p,c)=>{
+                    if(p !== c){
+                      throw new Error('the second ip array was not completely equal')
+                    }
+                    return p;
+                  });
+
+                  if(firstIp === secondIp)
+                    throw new Error(`did not fetch a new Ip, firstIp:${firstIp}, secondIp:${secondIp}`);
+
+                  done();
+                });
+          });
+      }).run();
+    })
+  })
 });
