@@ -27,7 +27,7 @@
   "scripts": {
     "clean": "rm ./index.js --force && find ./test -name '*.js*' -exec rm {} \\;",
     "pretest": "npm run clean && tsc -p ./",
-    "test": "./node_modules/.bin/jasmine"
+    "test": "./node_modules/.bin/mocha --timeout 0 --ui bdd /home/jp/rcm/test"
   },
   "repository": {
     "type": "git",
