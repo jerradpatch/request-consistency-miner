@@ -166,11 +166,11 @@ describe('testing all the different options', function () {
       'Pragma': 'no-cache',
       'Cache-Control': 'no-cache',
       'Upgrade-Insecure-Requests': 1,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+      'Accept': '*/*',
       'Accept-Encoding': 'identity',
       'Accept-Language': 'en-US,en;q=0.8',
-      'Cookie': 'bw=0; pp=r; _popfired=1',
-      'User-Agent': userAgent[ random % userAgent.length]
+      'Cookie': 'bw=0; pp=r;',
+      'User-Agent': 'curl/7.47.0'
     };
 
     return headers;
@@ -708,5 +708,32 @@ describe('testing all the different options', function () {
           });
       }).run();
     })
-  })
+  });
+
+  describe('torRequest: test that we can fetch an actual webpage', function () {
+    it('should return without error', function (done) {
+      var rcmOptions = createRcmOptions({
+        debug: true,
+        readFromDiskAlways: false,
+        ipUsageLimit: 100
+      });
+
+      Fiber(function () {
+        var rcm = new RequestConsistencyMiner(rcmOptions, torClientOptions);
+
+        var obj = {
+          source: "http://animeheaven.eu",
+          diskTimeToLive: 60 * 1000,
+          pageResponse: isPageSuccessful
+        };
+
+        var page = rcm.torRequest(obj);
+
+        if(page.length < 10000)
+          throw new Error("the correct page was not fetched");
+
+        done();
+      }).run();
+    });
+  });
 });

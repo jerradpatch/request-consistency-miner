@@ -40,7 +40,6 @@ export declare class RequestConsistencyMiner {
     torNewSession(): Promise<any>;
     private newIpUntilUnused();
     private ifIpAlreadyUsed(ipAddress);
-    private randomUserHeaders(oSource);
     private watchListStart($list, removeList);
     getIpBlackList(): string[];
     getIpBackoffList(): string[];

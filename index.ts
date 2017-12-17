@@ -53,14 +53,14 @@ export class RequestConsistencyMiner {
     constructor(private options: IRCMOptions, private torClientOptions) {
 
         if(!options.storagePath)
-            throw new Error(`Databases:common:torRequest:error no storagePath defined, storagePath: ${options.storagePath}`);
+            throw new Error(`RCM:constructor:error no storagePath defined, storagePath: ${options.storagePath}`);
 
 
         this.ipStorageLocation = options.storagePath + 'ipStorage';
         this.allUsedIpAddresses =  this.readIpList();
 
         if(options.debug)
-            console.log(`Databases:common:torRequest, startup ip list read from the disk, ${JSON.stringify(this.allUsedIpAddresses)}`);
+            console.log(`RCM:constructor, startup ip list read from the disk, ${JSON.stringify(this.allUsedIpAddresses)}`);
 
         this.tcc = new TorClientControl(torClientOptions);
         this.tr = new TorRequest();
@@ -88,7 +88,7 @@ export class RequestConsistencyMiner {
     public torRequest(oSource: IRCMOptions_source): string {
 
         if(!oSource || !oSource.source || !oSource.pageResponse)
-            throw new Error(`the required properties of the 'IRCMOptions_source' were not set, oSource:${JSON.stringify(oSource)}`);
+            throw new Error(`RCM:torRequest:error, the required properties of the 'IRCMOptions_source' were not set, oSource:${JSON.stringify(oSource)}`);
 
         let url = oSource.source;
 
@@ -98,13 +98,13 @@ export class RequestConsistencyMiner {
             this._readUrlFromDisk(url)
                 .then((data: IPageCacheObj)=> {
                     if(this.options.debug)
-                        console.log(`Databases:common:torRequest: file read from disk, keys: ${Object.keys(data)}`);
+                        console.log(`RCM:torRequest: file read from disk, keys: ${Object.keys(data)}`);
 
                     fut.return(data.page);
                 })
                 .catch((e)=> {
                     if(this.options.debug)
-                        console.log(`Databases:common:torRequest: file not read from disk, err: ${e}`);
+                        console.log(`RCM:torRequest: file not read from disk, err: ${e}`);
 
                     Fiber(() => {
                         let data =  this._torRequest(oSource);
@@ -119,7 +119,7 @@ export class RequestConsistencyMiner {
                                 fut.return(data);
                             }, (err) => {
                                 if(this.options.debug)
-                                    console.log(`Databases:common:torRequest:error, _writeUrlToDisk->err:${err}`);
+                                    console.log(`RCM:torRequest:error, _writeUrlToDisk->err:${err}`);
                                 fut.return(data);
                             });//always return data
                     }).run();
@@ -138,10 +138,29 @@ export class RequestConsistencyMiner {
 
         let fut = new Future();
 
-        if(this.options.debug)
-            console.log(`Databases:common:torRequest: request started, url: ${url}`);
+        if (this.options.debug)
+            console.log(`RCM:_torRequest: request started, url: ${url}`);
 
         let newSessionCount = 0;
+
+        let options = {
+            timeout: 60000
+        };
+
+        if (oSource.requestHeaders) {
+            let headers = oSource.requestHeaders(oSource);
+            let host = headers['Host'] || headers['host'];
+            if (host) {
+                if (host.indexOf('http://') === 0) {
+                    headers['Host'] = host.slice('http://'.length, host.length);
+                } else if (host.indexOf('https://') === 0) {
+                    headers['Host'] = host.slice('https://'.length, host.length);
+                }
+            }
+            delete headers['host'];
+
+            options['headers'] = headers;
+        }
 
         this.whenIpOverUsed(oSource).then((initialIpAddress)=> {
             let ipAddress = initialIpAddress;
@@ -149,25 +168,26 @@ export class RequestConsistencyMiner {
             function processNewSession() {
                 this.torNewSession().then((newIpAddress) => {
                     if (this.options.debug)
-                        console.log(`Databases:common:torRequest:torNewSession: recieved new session 1`);
+                        console.log(`RCM:_torRequest:torNewSession: recieved new session 1`);
 
                     ipAddress = newIpAddress;
                     processRequest.call(this);
                 }, (err)=> {
                     if (this.options.debug)
-                        console.error(`Databases:common:torRequest:error: new Session threw an error 1: err: ${err}`);
+                        console.error(`RCM:_torRequest:processNewSession:error: new Session threw an error 1: err: ${err}`);
                 });
                 newSessionCount++;
             };
 
             function processRequest() {
-                this.tr.get(url, this.randomUserHeaders(oSource), (err, res, body) => {
+
+                this.tr.get(url, options, (err, res, body) => {
 
                     if(newSessionCount > MAX_NEW_SESSIONS){
                         if (this.options.debug)
-                            console.error(`Databases:common:torRequest:error: the maximum attempt to get a new session was reached`);
+                            console.error(`RCM:_torRequest:processRequest:error: the maximum attempt to get a new session was reached`);
 
-                        throw new Error(`Databases:common:torRequest:error: the maximum attempt to get a new session was reached, MAX_NEW_SESSIONS:${MAX_NEW_SESSIONS}`);
+                        throw new Error(`RCM:_torRequest:processRequest:error: the maximum attempt to get a new session was reached, MAX_NEW_SESSIONS:${MAX_NEW_SESSIONS}`);
                     }
 
                     if (!err && res.statusCode == 200) {
@@ -178,7 +198,7 @@ export class RequestConsistencyMiner {
                                 this.options._currentIpUse++;
 
                                 if (this.options.debug)
-                                    console.error(`Databases:common:torRequest page returned, currentIpUse:${this.options._currentIpUse}`);
+                                    console.error(`RCM:_torRequest:processRequest page returned, currentIpUse:${this.options._currentIpUse}`);
 
                                 fut.return(body);
                                 break;
@@ -186,7 +206,7 @@ export class RequestConsistencyMiner {
                                 this.writeIpList(ipAddress);
 
                                 if (this.options.debug)
-                                    console.error(`Databases:common:torRequest Ip added to the black list, blackList:${this.getIpBlackList()}`);
+                                    console.error(`RCM:_torRequest:processRequest Ip added to the black list, blackList:${this.getIpBlackList()}`);
 
                                 processNewSession.call(this);
                                 break;
@@ -195,21 +215,21 @@ export class RequestConsistencyMiner {
                                     this.writeIpList(ipAddress, pageSuccess);
 
                                     if (this.options.debug)
-                                        console.error(`Databases:common:torRequest Ip added to the back off list, back-off list:${this.getIpBackoffList()}`);
+                                        console.error(`RCM:_torRequest:processRequest Ip added to the back off list, back-off list:${this.getIpBackoffList()}`);
 
                                     processNewSession.call(this);
                                 } else {
-                                    throw new Error(`an invalid option was returned from options.${oSource}.pageResponse`);
+                                    throw new Error(`RCM:_torRequest:processRequest, an invalid option was returned from options.${oSource}.pageResponse`);
                                 }
                         }
 
                     } else if (err.code == 'ETIMEDOUT') {
                         if (this.options.debug)
-                            console.error(`Databases:common:torRequest:error: connection timed out`);
+                            console.error(`RCM:_torRequest:processRequest:error: connection timed out`);
 
                     } else {
                         if (this.options.debug)
-                            console.warn(`Databases:common:torRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, url: ${url}`);
+                            console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, url: ${url}`);
 
                         processNewSession.call(this);
                     }
@@ -228,7 +248,7 @@ export class RequestConsistencyMiner {
     //     if(url) {
     //         let start = url.indexOf('//') + 2;
     //         if(start < 0)
-    //             throw new Error(`Databases:common:getSource:error url did not contain a protocol, url: ${url}`);
+    //             throw new Error(`RCM:common:getSource:error url did not contain a protocol, url: ${url}`);
     //
     //         let end = url.indexOf('/', start);
     //         if(end < 0)
@@ -237,7 +257,7 @@ export class RequestConsistencyMiner {
     //         let sourceString = url.slice(start, end);
     //         return this.options.sources[sourceString];
     //     }
-    //     throw new Error(`Databases:common:getSource:error url is not in the correct format, or no url was given, url: ${url}`)
+    //     throw new Error(`RCM:common:getSource:error url is not in the correct format, or no url was given, url: ${url}`)
     // }
 
     private whenIpOverUsed(oSource: IRCMOptions_source): Promise<any> {
@@ -245,7 +265,7 @@ export class RequestConsistencyMiner {
 
         if(ops.ipUsageLimit && ops.ipUsageLimit <= ops._currentIpUse) {
             if(ops.debug)
-                console.log(`Databases:common:torRequest: count limit reached, source: ${oSource.source}`);
+                console.log(`RCM:whenIpOverUsed: count limit reached, source: ${oSource.source}`);
 
             return this.torNewSession();
         } else {
@@ -263,6 +283,9 @@ export class RequestConsistencyMiner {
                 .then((ipAddress)=>{
                     this.options._currentIpUse = 0;
                     this.gettingNewSession = false;
+
+                    this.tr;
+
                     return ipAddress;
                 });
         }
@@ -302,43 +325,38 @@ export class RequestConsistencyMiner {
 
 
     //USER PROVIDED FUNCTIONALITY///////////////////
-    private randomUserHeaders(oSource: IRCMOptions_source) {
-        let headers;
-
-        if(oSource.requestHeaders) {
-            headers = oSource.requestHeaders(oSource);
-        } else {
-            let userAgent = [
-                'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/61.0.3163.100 Mobile/13B143 Safari/601.1.46',
-                'Mozilla/5.0 (iPad; CPU OS 9_1 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/61.0.3163.100 Mobile/13B143 Safari/601.1.46',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
-                'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
-            ];
-
-            let random = Math.ceil((Math.random() * 100));
-
-            headers = {
-                'Host': oSource.source,
-                'Connection': 'keep-alive',
-                'Pragma': 'no-cache',
-                'Cache-Control': 'no-cache',
-                'Upgrade-Insecure-Requests': 1,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Encoding': 'identity',
-                'Accept-Language': 'en-US,en;q=0.8',
-                'Cookie': 'bw=0; pp=r; _popfired=1',
-                'User-Agent': userAgent[random % userAgent.length]
-            }
-        }
-
-        let options = {
-            timeout: 60000,
-            headers: headers
-        };
-
-        return options;
-    }
+    // private randomUserHeaders(oSource: IRCMOptions_source) {
+    //     let headers;
+    //
+    //     if(oSource.requestHeaders) {
+    //         headers = oSource.requestHeaders(oSource);
+    //     } else {
+    //         let userAgent = [
+    //             'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/61.0.3163.100 Mobile/13B143 Safari/601.1.46',
+    //             'Mozilla/5.0 (iPad; CPU OS 9_1 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/61.0.3163.100 Mobile/13B143 Safari/601.1.46',
+    //             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
+    //             'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
+    //             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
+    //         ];
+    //
+    //         let random = Math.ceil((Math.random() * 100));
+    //
+    //         headers = {
+    //             'Host': oSource.source,
+    //             'Connection': 'keep-alive',
+    //             'Pragma': 'no-cache',
+    //             'Cache-Control': 'no-cache',
+    //             'Upgrade-Insecure-Requests': 1,
+    //             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    //             'Accept-Encoding': 'identity',
+    //             'Accept-Language': 'en-US,en;q=0.8',
+    //             'Cookie': 'bw=0; pp=r; _popfired=1',
+    //             'User-Agent': userAgent[random % userAgent.length]
+    //         }
+    //     }
+    //
+    //     return options;
+    // }
 
     private watchListStart($list: Observable<any>, removeList ) {
         return $list
@@ -410,7 +428,7 @@ export class RequestConsistencyMiner {
     private readList(path: string) {
 
         if(this.options.debug)
-            console.log(`Databases:common:readList sync read from disk, path: ${path}`);
+            console.log(`RCM:readList: sync read from disk, path: ${path}`);
 
         try {
             let data: string = fs.readFileSync(path, {encoding: 'utf8'});
@@ -424,13 +442,13 @@ export class RequestConsistencyMiner {
     private writeList(path: string, list: IIpObj[]) {
 
         if(this.options.debug)
-            console.log(`Databases:common:torRequest: sync write to disk, path: ${path}, list: ${JSON.stringify(list)}`);
+            console.log(`RCM:writeList: sync write to disk, path: ${path}, list: ${JSON.stringify(list)}`);
 
         try {
             fs.writeFileSync(path, JSON.stringify(list));
         } catch(e) {
             if(this.options.debug)
-                console.log(`Databases:common:torRequest: could not write list file, ${e}`);
+                console.log(`RCM:writeList: could not write list file, ${e}`);
         };
     }
 
@@ -442,7 +460,7 @@ export class RequestConsistencyMiner {
 
         if(this.pageCache[url]) {
             if(this.options.debug)
-                console.log(`Databases:common:torRequest: returned from page cache, url:${url}`);
+                console.log(`RCM:_readUrlFromDisk:pageCache: returned from page cache, url:${url}`);
 
             return Promise.resolve(this.pageCache[url]);
         }
@@ -452,13 +470,13 @@ export class RequestConsistencyMiner {
 
                 if (err) {
                     if(this.options.debug)
-                        console.log(`Databases:common:_readUrlFromDisk: could not read from disk, dir:${dir}, error:${err}`);
+                        console.log(`RCM:_readUrlFromDisk:readFile: could not read from disk, dir:${dir}, error:${err}`);
                     rej(err);
                 } else {
                     let obj = Object.assign({}, JSON.parse(readOnlyObj));
 
                     if(this.options.debug)
-                        console.log(`Databases:common:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
+                        console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
 
                     if(obj.date) {
 
@@ -466,7 +484,7 @@ export class RequestConsistencyMiner {
                         let savedDateMills = new Date(obj.date).getMilliseconds();
                         if (currentDateMills > savedDateMills) {
                             if(this.options.debug)
-                                console.log(`Databases:common:_readUrlFromDisk: file read from disk had a date that expired, dir: ${dir}`);
+                                console.log(`RCM:_readUrlFromDisk: file read from disk had a date that expired, dir: ${dir}`);
                             return this.deleteFile(dir).then(rej, (err)=>{
                                 rej(err);
                             });
@@ -506,13 +524,13 @@ export class RequestConsistencyMiner {
 
     private deleteFile(path: string){
         if(this.options.debug)
-            console.log(`Databases:common:deleteFile: requested file deletion, path: ${path}`);
+            console.log(`RCM:deleteFile: requested file deletion, path: ${path}`);
 
         return new Promise((res,rej)=> {
             fs.unlink(path, function (err) {
                 if (err) {
                     if(this.options.debug)
-                        console.log(`Databases:common:deleteFile: error deleting file, path: ${path}`);
+                        console.log(`RCM:deleteFile: error deleting file, path: ${path}`);
                     rej(err);
                     return;
                 }
