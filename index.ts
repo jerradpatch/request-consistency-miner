@@ -92,7 +92,7 @@ export class RequestConsistencyMiner {
 
         let url = oSource.source;
 
-        if(this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
+        if(this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
 
             let fut = new Future();
             this._readUrlFromDisk(url)
