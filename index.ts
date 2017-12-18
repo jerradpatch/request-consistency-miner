@@ -147,20 +147,7 @@ export class RequestConsistencyMiner {
             timeout: 60000
         };
 
-        if (oSource.requestHeaders) {
-            let headers = oSource.requestHeaders(oSource);
-            let host = headers['Host'] || headers['host'];
-            if (host) {
-                if (host.indexOf('http://') === 0) {
-                    headers['Host'] = host.slice('http://'.length, host.length);
-                } else if (host.indexOf('https://') === 0) {
-                    headers['Host'] = host.slice('https://'.length, host.length);
-                }
-            }
-            delete headers['host'];
-
-            options['headers'] = headers;
-        }
+        fixHeaders(oSource)
 
         this.whenIpOverUsed(oSource).then((initialIpAddress)=> {
             let ipAddress = initialIpAddress;
@@ -219,7 +206,7 @@ export class RequestConsistencyMiner {
 
                                     processNewSession.call(this);
                                 } else {
-                                    throw new Error(`RCM:_torRequest:processRequest, an invalid option was returned from options.${oSource}.pageResponse`);
+                                    throw new Error(`RCM:_torRequest:processRequest, an invalid option was returned from pageResponse()`);
                                 }
                         }
 
@@ -229,7 +216,7 @@ export class RequestConsistencyMiner {
 
                     } else {
                         if (this.options.debug)
-                            console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, url: ${url}`);
+                            console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
 
                         processNewSession.call(this);
                     }
@@ -239,6 +226,25 @@ export class RequestConsistencyMiner {
 
             processRequest.call(this);
         });
+
+        function fixHeaders(sour){
+            if (sour.requestHeaders) {
+                let headers = sour.requestHeaders(sour);
+                let host = headers['Host'] || headers['host'];
+                if (host) {
+                    if (host.indexOf('http://') === 0) {
+                        host = host.slice('http://'.length)
+                    } else if (host.indexOf('https://') === 0) {
+                        host = host.slice('https://'.length);
+                    }
+
+                    headers['Host'] = host.slice(0,host.indexOf('/'));
+                    delete headers['host'];
+                }
+
+                options['headers'] = headers;
+            }
+        }
 
         let page = fut.wait();
         return page;

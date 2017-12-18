@@ -49,7 +49,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         if (!oSource || !oSource.source || !oSource.pageResponse)
             throw new Error("RCM:torRequest:error, the required properties of the 'IRCMOptions_source' were not set, oSource:" + JSON.stringify(oSource));
         var url = oSource.source;
-        if (this.options.debug || this.options.readFromDiskAlways || oSource.diskTimeToLive) {
+        if (this.options.readFromDiskAlways || oSource.diskTimeToLive) {
             var fut_1 = new Future();
             this._readUrlFromDisk(url)
                 .then(function (data) {
@@ -92,20 +92,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var options = {
             timeout: 60000
         };
-        if (oSource.requestHeaders) {
-            var headers = oSource.requestHeaders(oSource);
-            var host = headers['Host'] || headers['host'];
-            if (host) {
-                if (host.indexOf('http://') === 0) {
-                    headers['Host'] = host.slice('http://'.length, host.length);
-                }
-                else if (host.indexOf('https://') === 0) {
-                    headers['Host'] = host.slice('https://'.length, host.length);
-                }
-            }
-            delete headers['host'];
-            options['headers'] = headers;
-        }
+        fixHeaders(oSource);
         this.whenIpOverUsed(oSource).then(function (initialIpAddress) {
             var ipAddress = initialIpAddress;
             function processNewSession() {
@@ -153,7 +140,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                                     processNewSession.call(_this);
                                 }
                                 else {
-                                    throw new Error("RCM:_torRequest:processRequest, an invalid option was returned from options." + oSource + ".pageResponse");
+                                    throw new Error("RCM:_torRequest:processRequest, an invalid option was returned from pageResponse()");
                                 }
                         }
                     }
@@ -163,7 +150,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     }
                     else {
                         if (_this.options.debug)
-                            console.warn("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", url: " + url);
+                            console.warn("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", \n\r oSource: " + JSON.stringify(oSource) + ", \n\r options:" + JSON.stringify(options));
                         processNewSession.call(_this);
                     }
                 });
@@ -171,6 +158,23 @@ var RequestConsistencyMiner = /** @class */ (function () {
             ;
             processRequest.call(_this);
         });
+        function fixHeaders(sour) {
+            if (sour.requestHeaders) {
+                var headers = sour.requestHeaders(sour);
+                var host = headers['Host'] || headers['host'];
+                if (host) {
+                    if (host.indexOf('http://') === 0) {
+                        host = host.slice('http://'.length);
+                    }
+                    else if (host.indexOf('https://') === 0) {
+                        host = host.slice('https://'.length);
+                    }
+                    headers['Host'] = host.slice(0, host.indexOf('/'));
+                    delete headers['host'];
+                }
+                options['headers'] = headers;
+            }
+        }
         var page = fut.wait();
         return page;
     };

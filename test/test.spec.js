@@ -121,10 +121,6 @@ describe('testing all the different options', function () {
             console.log("Databases:common:torRequest: page did not meet minimum length, url: " + url);
             return 'blacklist';
         }
-        else if (body.indexOf("type='video/mp4'") == -1) {
-            console.log("Databases:common:torRequest: no video tag found, url: " + url);
-            return 'blacklist';
-        }
         else {
             console.log("Databases:common:torRequest: success, url: " + url);
             return 'true';
@@ -140,7 +136,7 @@ describe('testing all the different options', function () {
         ];
         var random = Math.ceil((Math.random() * 100));
         var headers = {
-            'Host': oSource.source,
+            'host': oSource.source,
             'Connection': 'keep-alive',
             'Pragma': 'no-cache',
             'Cache-Control': 'no-cache',
@@ -569,9 +565,10 @@ describe('testing all the different options', function () {
             Fiber(function () {
                 var rcm = new index_1.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 var obj = {
-                    source: "http://animeheaven.eu",
+                    source: "http://animeheaven.eu/i.php?a=Black Clover Dubbed",
                     diskTimeToLive: 60 * 1000,
-                    pageResponse: isPageSuccessful
+                    pageResponse: isPageSuccessful,
+                    requestHeaders: randomUserHeaders
                 };
                 var page = rcm.torRequest(obj);
                 if (page.length < 10000)
