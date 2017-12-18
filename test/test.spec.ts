@@ -724,7 +724,7 @@ describe('testing all the different options', function () {
         var rcm = new RequestConsistencyMiner(rcmOptions, torClientOptions);
 
         var obj = {
-          source: "http://animeheaven.eu/i.php?a=Black Clover Dubbed",
+          source: "http://animeheaven.eu",
           diskTimeToLive: 60 * 1000,
           pageResponse: isPageSuccessful,
           requestHeaders: randomUserHeaders

@@ -565,7 +565,7 @@ describe('testing all the different options', function () {
             Fiber(function () {
                 var rcm = new index_1.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 var obj = {
-                    source: "http://animeheaven.eu/i.php?a=Black Clover Dubbed",
+                    source: "http://animeheaven.eu",
                     diskTimeToLive: 60 * 1000,
                     pageResponse: isPageSuccessful,
                     requestHeaders: randomUserHeaders

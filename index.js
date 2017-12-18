@@ -169,7 +169,9 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     else if (host.indexOf('https://') === 0) {
                         host = host.slice('https://'.length);
                     }
-                    headers['Host'] = host.slice(0, host.indexOf('/'));
+                    var endOfDomain = host.indexOf('/');
+                    if (endOfDomain > 0)
+                        headers['Host'] = host.slice(0, endOfDomain);
                     delete headers['host'];
                 }
                 options['headers'] = headers;

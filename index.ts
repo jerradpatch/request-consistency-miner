@@ -147,7 +147,7 @@ export class RequestConsistencyMiner {
             timeout: 60000
         };
 
-        fixHeaders(oSource)
+        fixHeaders(oSource);
 
         this.whenIpOverUsed(oSource).then((initialIpAddress)=> {
             let ipAddress = initialIpAddress;
@@ -238,7 +238,10 @@ export class RequestConsistencyMiner {
                         host = host.slice('https://'.length);
                     }
 
-                    headers['Host'] = host.slice(0,host.indexOf('/'));
+                    let endOfDomain = host.indexOf('/');
+                    if(endOfDomain > 0)
+                        headers['Host'] = host.slice(0,endOfDomain);
+
                     delete headers['host'];
                 }
 
