@@ -490,7 +490,7 @@ export class RequestConsistencyMiner {
                     let obj = Object.assign({}, JSON.parse(readOnlyObj));
 
                     if(this.options.debug)
-                        console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}'`);
+                        console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}, time:${data.date}'`);
 
                     if(obj.date) {
 
@@ -524,6 +524,8 @@ export class RequestConsistencyMiner {
                     rej(err);
                     return;
                 }
+                if(this.options.debug)
+                    console.log(`RCM:_writeUrlToDisk: the file was written to the disk, dir: '${dir}, time:${data.date}'`);
 
                 this.addPageToPageCache(data, url);
                 res(data);
