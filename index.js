@@ -92,7 +92,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var options = {
             timeout: 60000
         };
-        fixHeaders(oSource);
+        fixHeaders(oSource, options);
         this.whenIpOverUsed(oSource).then(function (initialIpAddress) {
             var ipAddress = initialIpAddress;
             function processNewSession() {
@@ -123,7 +123,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                             case 'true':
                                 _this.options._currentIpUse++;
                                 if (_this.options.debug)
-                                    console.error("RCM:_torRequest:processRequest page returned, currentIpUse:" + _this.options._currentIpUse);
+                                    console.log("RCM:_torRequest:processRequest page returned, currentIpUse:" + ipAddress);
                                 fut.return(body);
                                 break;
                             case 'blacklist':
@@ -158,7 +158,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             ;
             processRequest.call(_this);
         });
-        function fixHeaders(sour) {
+        function fixHeaders(sour, ops) {
             if (sour.requestHeaders) {
                 var headers = sour.requestHeaders(sour);
                 var host = headers['Host'] || headers['host'];
@@ -174,7 +174,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                         headers['Host'] = host.slice(0, endOfDomain);
                     delete headers['host'];
                 }
-                options['headers'] = headers;
+                ops['headers'] = headers;
             }
         }
         var page = fut.wait();
@@ -204,6 +204,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
         }
         else {
             ops._currentIpUse = ops._currentIpUse + 1 || 0;
+            if (ops.debug)
+                console.log("RCM:whenIpOverUsed: current ipUsed#, source: " + oSource.source + ", _currentIpUse #: " + ops._currentIpUse);
             return this.torReady;
         }
     };

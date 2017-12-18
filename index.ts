@@ -147,7 +147,7 @@ export class RequestConsistencyMiner {
             timeout: 60000
         };
 
-        fixHeaders(oSource);
+        fixHeaders(oSource, options);
 
         this.whenIpOverUsed(oSource).then((initialIpAddress)=> {
             let ipAddress = initialIpAddress;
@@ -185,7 +185,7 @@ export class RequestConsistencyMiner {
                                 this.options._currentIpUse++;
 
                                 if (this.options.debug)
-                                    console.error(`RCM:_torRequest:processRequest page returned, currentIpUse:${this.options._currentIpUse}`);
+                                    console.log(`RCM:_torRequest:processRequest page returned, currentIpUse:${ipAddress}, source:${oSource.source}`);
 
                                 fut.return(body);
                                 break;
@@ -227,7 +227,7 @@ export class RequestConsistencyMiner {
             processRequest.call(this);
         });
 
-        function fixHeaders(sour){
+        function fixHeaders(sour, ops){
             if (sour.requestHeaders) {
                 let headers = sour.requestHeaders(sour);
                 let host = headers['Host'] || headers['host'];
@@ -245,7 +245,7 @@ export class RequestConsistencyMiner {
                     delete headers['host'];
                 }
 
-                options['headers'] = headers;
+                ops['headers'] = headers;
             }
         }
 
@@ -279,6 +279,10 @@ export class RequestConsistencyMiner {
             return this.torNewSession();
         } else {
             ops._currentIpUse = ops._currentIpUse + 1 || 0;
+
+            if(ops.debug)
+                console.log(`RCM:whenIpOverUsed: current ipUsed#, source: ${oSource.source}, _currentIpUse #: ${ops._currentIpUse}`);
+
             return this.torReady;
         }
     }
