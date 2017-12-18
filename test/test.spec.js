@@ -566,7 +566,7 @@ describe('testing all the different options', function () {
                 var rcm = new index_1.RequestConsistencyMiner(rcmOptions, torClientOptions);
                 var obj = {
                     source: "http://animeheaven.eu",
-                    diskTimeToLive: 60 * 1000,
+                    diskTimeToLive: 3600000,
                     pageResponse: isPageSuccessful,
                     requestHeaders: randomUserHeaders
                 };

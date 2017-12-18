@@ -123,7 +123,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                             case 'true':
                                 _this.options._currentIpUse++;
                                 if (_this.options.debug)
-                                    console.log("RCM:_torRequest:processRequest page returned, currentIpUse:" + ipAddress);
+                                    console.log("RCM:_torRequest:processRequest page returned, currentIpUse:" + ipAddress + ", source:" + oSource.source);
                                 fut.return(body);
                                 break;
                             case 'blacklist':
@@ -171,7 +171,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     }
                     var endOfDomain = host.indexOf('/');
                     if (endOfDomain > 0)
-                        headers['Host'] = host.slice(0, endOfDomain);
+                        host = host.slice(0, endOfDomain);
+                    headers['Host'] = host;
                     delete headers['host'];
                 }
                 ops['headers'] = headers;

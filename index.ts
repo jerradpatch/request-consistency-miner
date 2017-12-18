@@ -240,8 +240,9 @@ export class RequestConsistencyMiner {
 
                     let endOfDomain = host.indexOf('/');
                     if(endOfDomain > 0)
-                        headers['Host'] = host.slice(0,endOfDomain);
+                        host = host.slice(0,endOfDomain);
 
+                    headers['Host'] = host;
                     delete headers['host'];
                 }
 
