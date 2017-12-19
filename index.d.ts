@@ -17,7 +17,7 @@ export interface IIpObj {
 }
 export interface IPageCacheObj {
     date?: Date;
-    url?: string;
+    url: string;
     page: string;
 }
 export declare class RequestConsistencyMiner {
@@ -50,7 +50,7 @@ export declare class RequestConsistencyMiner {
     private _readUrlFromDisk(url);
     private urlToDir(url);
     private testIfDateExpired(obj, dir);
-    private _writeUrlToDisk(url, data);
+    private _writeUrlToDisk(data);
     private addPageToPageCache(obj);
     private deleteFile(path);
 }

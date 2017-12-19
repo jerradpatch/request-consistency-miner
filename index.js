@@ -39,6 +39,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
             }
         });
         this.watchListStart(this.obsExpiringPageCache, function (obj) {
+            if (_this.options.debug)
+                console.warn("RCM:watchListStart: deleting due to date exipration, obj:" + JSON.stringify(obj) + ", Date:" + new Date());
             delete _this.pageCache[obj.url];
             var dir = _this.urlToDir(obj.url);
             _this.deleteFile(dir);
@@ -60,14 +62,14 @@ var RequestConsistencyMiner = /** @class */ (function () {
             })
                 .catch(function (e) {
                 if (_this.options.debug)
-                    console.log("RCM:torRequest: file not read from disk, err: " + e);
+                    console.warn("RCM:torRequest: file not read from disk, err: " + e + ", oSource:" + JSON.stringify(oSource));
                 Fiber(function () {
                     var data = _this._torRequest(oSource);
-                    var obj = { page: data };
+                    var obj = { page: data, url: url };
                     if (oSource.diskTimeToLive) {
                         obj['date'] = new Date(Date.now() + oSource.diskTimeToLive);
                     }
-                    return _this._writeUrlToDisk(url, obj)
+                    return _this._writeUrlToDisk(obj)
                         .then(function () {
                         fut_1.return(data);
                     }, function (err) {
@@ -130,7 +132,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                             case 'blacklist':
                                 _this.writeIpList(ipAddress);
                                 if (_this.options.debug)
-                                    console.error("RCM:_torRequest:processRequest Ip added to the black list, blackList:" + _this.getIpBlackList());
+                                    console.error("RCM:_torRequest:processRequest Ip added to the black list, blackList:" + _this.getIpBlackList() + ", body:" + body);
                                 processNewSession.call(_this);
                                 break;
                             default:
@@ -141,7 +143,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                                     processNewSession.call(_this);
                                 }
                                 else {
-                                    throw new Error("RCM:_torRequest:processRequest, an invalid option was returned from pageResponse()");
+                                    fut.throw(new Error("RCM:_torRequest:processRequest, an invalid option was returned from pageResponse():" + pageSuccess + ". Date/'blacklist'/'true'"));
                                 }
                         }
                     }
@@ -150,7 +152,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                             console.error("RCM:_torRequest:processRequest:error: connection timed out");
                     }
                     else {
-                        throw new Error("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", \n\r oSource: " + JSON.stringify(oSource) + ", \n\r options:" + JSON.stringify(options));
+                        fut.throw(new Error("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", \n\r oSource: " + JSON.stringify(oSource) + ", \n\r options:" + JSON.stringify(options)));
                         // if (this.options.debug)
                         //     console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
                         // processNewSession.call(this);
@@ -393,6 +395,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     if (_this.options.debug)
                         console.log("RCM:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj));
                     if (_this.testIfDateExpired(obj, dir)) {
+                        if (_this.options.debug)
+                            console.warn("RCM:_readUrlFromDisk: deleting due to date exipration, obj:" + JSON.stringify(obj) + ", Date:" + new Date());
                         return _this.deleteFile(dir).then(rej, function (err) {
                             rej(err);
                         });
@@ -423,9 +427,9 @@ var RequestConsistencyMiner = /** @class */ (function () {
             console.log("RCM:_readUrlFromDisk: file read from disk had a valid date or no date, path: " + dir);
         return false;
     };
-    RequestConsistencyMiner.prototype._writeUrlToDisk = function (url, data) {
+    RequestConsistencyMiner.prototype._writeUrlToDisk = function (data) {
         var _this = this;
-        var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
+        var rDir = data.url.replace(/\//g, "%").replace(/ /g, "#");
         var dir = this.options.storagePath + rDir;
         return new Promise(function (res, rej) {
             fs.writeFile(dir, JSON.stringify(data), function (err) {
@@ -435,7 +439,6 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
                 if (_this.options.debug)
                     console.log("RCM:_writeUrlToDisk: the file was written to the disk, dir: '" + dir + ", time:" + data.date + "'");
-                data.url = url;
                 _this.addPageToPageCache(data);
                 res(data);
             });

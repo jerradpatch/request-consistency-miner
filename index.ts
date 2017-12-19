@@ -27,7 +27,7 @@ export interface IIpObj {
 
 export interface IPageCacheObj {
     date?: Date;
-    url?: string;
+    url: string;
     page: string;
 };
 
@@ -77,6 +77,9 @@ export class RequestConsistencyMiner {
         });
 
         this.watchListStart(this.obsExpiringPageCache, (obj: IPageCacheObj) => {
+            if(this.options.debug)
+                console.warn(`RCM:watchListStart: deleting due to date exipration, obj:${JSON.stringify(obj)}, Date:${new Date()}`);
+
             delete this.pageCache[obj.url];
             let dir = this.urlToDir(obj.url);
             this.deleteFile(dir);
@@ -105,7 +108,7 @@ export class RequestConsistencyMiner {
                 })
                 .catch((e)=> {
                     if(this.options.debug)
-                        console.log(`RCM:torRequest: file not read from disk, err: ${e}`);
+                        console.warn(`RCM:torRequest: file not read from disk, err: ${e}, oSource:${JSON.stringify(oSource)}`);
 
                     Fiber(() => {
                         let data =  this._torRequest(oSource);
@@ -498,6 +501,9 @@ export class RequestConsistencyMiner {
                         console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}`);
 
                     if(this.testIfDateExpired(obj, dir)){
+                        if(this.options.debug)
+                            console.warn(`RCM:_readUrlFromDisk: deleting due to date exipration, obj:${JSON.stringify(obj)}, Date:${new Date()}`);
+
                         return this.deleteFile(dir).then(rej, (err)=>{
                             rej(err);
                         });
@@ -536,7 +542,7 @@ export class RequestConsistencyMiner {
 
     private _writeUrlToDisk(data: IPageCacheObj): Promise<IPageCacheObj> {
 
-        let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
+        let rDir = data.url.replace(/\//g, "%").replace(/ /g, "#");
         let dir = this.options.storagePath + rDir;
 
         return new Promise((res, rej)=> {
