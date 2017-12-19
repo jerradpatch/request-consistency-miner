@@ -210,7 +210,7 @@ export class RequestConsistencyMiner {
                                 }
                         }
 
-                    } else if (err.code == 'ETIMEDOUT') {
+                    } else if (err && err.code == 'ETIMEDOUT') {
                         if (this.options.debug)
                             console.error(`RCM:_torRequest:processRequest:error: connection timed out`);
 
@@ -471,12 +471,12 @@ export class RequestConsistencyMiner {
         let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         let dir = this.options.storagePath + rDir;
 
-
-        if(this.pageCache[url]) {
+        let pcObj = this.pageCache[url];
+        if(pcObj && !this.testIfDateExpired(pcObj, dir)) {
             if(this.options.debug)
                 console.log(`RCM:_readUrlFromDisk:pageCache: returned from page cache, url:${url}`);
 
-            return Promise.resolve(this.pageCache[url]);
+            return Promise.resolve(pcObj);
         }
 
         return new Promise((res, rej)=> {
@@ -490,19 +490,12 @@ export class RequestConsistencyMiner {
                     let obj = Object.assign({}, JSON.parse(readOnlyObj));
 
                     if(this.options.debug)
-                        console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}, time:${data.date}'`);
+                        console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}`);
 
-                    if(obj.date) {
-
-                        let currentDateMills = Date.now();
-                        let savedDateMills = new Date(obj.date).getMilliseconds();
-                        if (currentDateMills > savedDateMills) {
-                            if(this.options.debug)
-                                console.log(`RCM:_readUrlFromDisk: file read from disk had a date that expired, dir: ${dir}`);
-                            return this.deleteFile(dir).then(rej, (err)=>{
-                                rej(err);
-                            });
-                        }
+                    if(this.testIfDateExpired(obj, dir)){
+                        return this.deleteFile(dir).then(rej, (err)=>{
+                            rej(err);
+                        });
                     }
 
                     obj.url = url;
@@ -511,6 +504,23 @@ export class RequestConsistencyMiner {
                 }
             });
         });
+    }
+
+    private testIfDateExpired(obj, dir){
+        if(obj.date && !this.options.readFromDiskAlways) {
+
+            let currentDateMills = Date.now();
+            let savedDateMills = new Date(obj.date).getMilliseconds();
+            if (currentDateMills > savedDateMills) {
+                if(this.options.debug)
+                    console.log(`RCM:_readUrlFromDisk: file read from disk had a date that expired, path: ${dir}, currentDateMills:${currentDateMills}, savedDateMills:${savedDateMills}`);
+                return true;
+            }
+        }
+        if(this.options.debug)
+            console.log(`RCM:_readUrlFromDisk: file read from disk had a valid date or no date, path: ${dir}`);
+
+        return false;
     }
 
     private _writeUrlToDisk(url: string, data: IPageCacheObj): Promise<IPageCacheObj> {

@@ -144,7 +144,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                                 }
                         }
                     }
-                    else if (err.code == 'ETIMEDOUT') {
+                    else if (err && err.code == 'ETIMEDOUT') {
                         if (_this.options.debug)
                             console.error("RCM:_torRequest:processRequest:error: connection timed out");
                     }
@@ -370,10 +370,11 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var _this = this;
         var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         var dir = this.options.storagePath + rDir;
-        if (this.pageCache[url]) {
+        var pcObj = this.pageCache[url];
+        if (pcObj && !this.testIfDateExpired(pcObj, dir)) {
             if (this.options.debug)
                 console.log("RCM:_readUrlFromDisk:pageCache: returned from page cache, url:" + url);
-            return Promise.resolve(this.pageCache[url]);
+            return Promise.resolve(pcObj);
         }
         return new Promise(function (res, rej) {
             fs.readFile(dir, 'utf8', function (err, readOnlyObj) {
@@ -385,17 +386,11 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 else {
                     var obj = Object.assign({}, JSON.parse(readOnlyObj));
                     if (_this.options.debug)
-                        console.log("RCM:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj) + "'");
-                    if (obj.date) {
-                        var currentDateMills = Date.now();
-                        var savedDateMills = new Date(obj.date).getMilliseconds();
-                        if (currentDateMills > savedDateMills) {
-                            if (_this.options.debug)
-                                console.log("RCM:_readUrlFromDisk: file read from disk had a date that expired, dir: " + dir);
-                            return _this.deleteFile(dir).then(rej, function (err) {
-                                rej(err);
-                            });
-                        }
+                        console.log("RCM:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj));
+                    if (_this.testIfDateExpired(obj, dir)) {
+                        return _this.deleteFile(dir).then(rej, function (err) {
+                            rej(err);
+                        });
                     }
                     obj.url = url;
                     _this.addPageToPageCache(obj, url);
@@ -403,6 +398,20 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
             });
         });
+    };
+    RequestConsistencyMiner.prototype.testIfDateExpired = function (obj, dir) {
+        if (obj.date && !this.options.readFromDiskAlways) {
+            var currentDateMills = Date.now();
+            var savedDateMills = new Date(obj.date).getMilliseconds();
+            if (currentDateMills > savedDateMills) {
+                if (this.options.debug)
+                    console.log("RCM:_readUrlFromDisk: file read from disk had a date that expired, path: " + dir + ", currentDateMills:" + currentDateMills + ", savedDateMills:" + savedDateMills);
+                return true;
+            }
+        }
+        if (this.options.debug)
+            console.log("RCM:_readUrlFromDisk: file read from disk had a valid date or no date, path: " + dir);
+        return false;
     };
     RequestConsistencyMiner.prototype._writeUrlToDisk = function (url, data) {
         var _this = this;
@@ -414,6 +423,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
                     rej(err);
                     return;
                 }
+                if (_this.options.debug)
+                    console.log("RCM:_writeUrlToDisk: the file was written to the disk, dir: '" + dir + ", time:" + data.date + "'");
                 _this.addPageToPageCache(data, url);
                 res(data);
             });
