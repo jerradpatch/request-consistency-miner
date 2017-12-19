@@ -328,13 +328,17 @@ export class RequestConsistencyMiner {
     private ifIpAlreadyUsed(ipAddress: string): boolean {
         let hasIp = this.allUsedIpAddresses.filter((used: IIpObj)=>{
                 return used.ipAddress === ipAddress;
-            }).length > 0;
+            });
+        let found = hasIp.length > 0;
 
-        if(hasIp) {
-            return true;
-        } else {
-            return false;
+        if(this.options.debug){
+            if(found){
+                console.log(`RCM:ifIpAlreadyUsed: ip existed in allUsedIpAddress:${JSON.stringify(hasIp)}`);
+            } else {
+                console.log(`RCM:ifIpAlreadyUsed: ip was not found in allUsedIpAddress:${JSON.stringify(hasIp)}`);
+            }
         }
+        return found;
     }
 
 

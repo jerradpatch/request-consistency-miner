@@ -245,13 +245,17 @@ var RequestConsistencyMiner = /** @class */ (function () {
     RequestConsistencyMiner.prototype.ifIpAlreadyUsed = function (ipAddress) {
         var hasIp = this.allUsedIpAddresses.filter(function (used) {
             return used.ipAddress === ipAddress;
-        }).length > 0;
-        if (hasIp) {
-            return true;
+        });
+        var found = hasIp.length > 0;
+        if (this.options.debug) {
+            if (found) {
+                console.log("RCM:ifIpAlreadyUsed: ip existed in allUsedIpAddress:" + JSON.stringify(hasIp));
+            }
+            else {
+                console.log("RCM:ifIpAlreadyUsed: ip was not found in allUsedIpAddress:" + JSON.stringify(hasIp));
+            }
         }
-        else {
-            return false;
-        }
+        return found;
     };
     //USER PROVIDED FUNCTIONALITY///////////////////
     // private randomUserHeaders(oSource: IRCMOptions_source) {
