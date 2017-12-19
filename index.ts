@@ -216,10 +216,11 @@ export class RequestConsistencyMiner {
                             console.error(`RCM:_torRequest:processRequest:error: connection timed out`);
 
                     } else {
-                        if (this.options.debug)
-                            console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
+                        throw new Error(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`)
+                        // if (this.options.debug)
+                        //     console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
 
-                        processNewSession.call(this);
+                        // processNewSession.call(this);
                     }
 
                 });

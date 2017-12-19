@@ -150,9 +150,10 @@ var RequestConsistencyMiner = /** @class */ (function () {
                             console.error("RCM:_torRequest:processRequest:error: connection timed out");
                     }
                     else {
-                        if (_this.options.debug)
-                            console.warn("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", \n\r oSource: " + JSON.stringify(oSource) + ", \n\r options:" + JSON.stringify(options));
-                        processNewSession.call(_this);
+                        throw new Error("RCM:_torRequest:processRequest:error: " + err + ", res.statusCode : " + (res && res.statusCode) + ", \n\r oSource: " + JSON.stringify(oSource) + ", \n\r options:" + JSON.stringify(options));
+                        // if (this.options.debug)
+                        //     console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
+                        // processNewSession.call(this);
                     }
                 });
             }
