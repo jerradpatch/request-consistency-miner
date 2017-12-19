@@ -461,9 +461,9 @@ describe('testing all the different options', function () {
                 Fiber(function () {
                     var rcm = new RCM.RequestConsistencyMiner(rcmOptions, torClientOptions);
                     rcm.torRequest(paramOptions);
-                    if (!asycContentsRead)
-                        throw new Error("asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:" + asycContentsRead);
                     setTimeout(function () {
+                        if (!asycContentsRead)
+                            throw new Error("asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:" + asycContentsRead);
                         if (!asycWrite || JSON.parse(asycWrite).page !== returnedPageData)
                             throw new Error("asycWrite, the disk should have been attempted to have been written to with page data from, expect:" + returnedPageData + ", actual:" + asycWrite);
                         //disk should contain cached page

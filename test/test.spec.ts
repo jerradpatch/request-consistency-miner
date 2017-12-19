@@ -585,10 +585,10 @@ describe('testing all the different options', function () {
 
           rcm.torRequest(paramOptions);
 
-          if (!asycContentsRead)
-            throw new Error(`asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:${asycContentsRead}`);
-
           setTimeout(() => {
+            if (!asycContentsRead)
+              throw new Error(`asycContentsRead, the disk should have been attempted to have been read from, expect:true, actual:${asycContentsRead}`);
+
             if (!asycWrite || JSON.parse(asycWrite).page !== returnedPageData)
               throw new Error(`asycWrite, the disk should have been attempted to have been written to with page data from, expect:${returnedPageData}, actual:${asycWrite}`);
 

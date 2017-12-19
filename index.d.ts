@@ -48,8 +48,9 @@ export declare class RequestConsistencyMiner {
     private readList(path);
     private writeList(path, list);
     private _readUrlFromDisk(url);
+    private urlToDir(url);
     private testIfDateExpired(obj, dir);
     private _writeUrlToDisk(url, data);
-    private addPageToPageCache(obj, url);
+    private addPageToPageCache(obj);
     private deleteFile(path);
 }

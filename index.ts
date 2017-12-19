@@ -78,7 +78,8 @@ export class RequestConsistencyMiner {
 
         this.watchListStart(this.obsExpiringPageCache, (obj: IPageCacheObj) => {
             delete this.pageCache[obj.url];
-            this.deleteFile(obj.url);
+            let dir = this.urlToDir(obj.url);
+            this.deleteFile(dir);
         });
 
         this.torNewSession();
@@ -472,8 +473,7 @@ export class RequestConsistencyMiner {
 
     private _readUrlFromDisk(url: string): Promise<IPageCacheObj> {
 
-        let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
-        let dir = this.options.storagePath + rDir;
+        let dir = this.urlToDir(url);
 
         let pcObj = this.pageCache[url];
         if(pcObj && !this.testIfDateExpired(pcObj, dir)) {
@@ -503,11 +503,17 @@ export class RequestConsistencyMiner {
                     }
 
                     obj.url = url;
-                    this.addPageToPageCache(obj, url);
+                    this.addPageToPageCache(obj);
                     res(obj);
                 }
             });
         });
+    }
+
+    private urlToDir(url:string){
+        let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
+        let dir = this.options.storagePath + rDir;
+        return dir;
     }
 
     private testIfDateExpired(obj, dir){
@@ -541,15 +547,16 @@ export class RequestConsistencyMiner {
                 if(this.options.debug)
                     console.log(`RCM:_writeUrlToDisk: the file was written to the disk, dir: '${dir}, time:${data.date}'`);
 
-                this.addPageToPageCache(data, url);
+                data.url = url;
+                this.addPageToPageCache(data);
                 res(data);
             });
         });
     }
 
-    private addPageToPageCache(obj: IPageCacheObj, url: string){
+    private addPageToPageCache(obj: IPageCacheObj){
         this.obsExpiringPageCache.next(obj);
-        this.pageCache[url] = obj;
+        this.pageCache[obj.url] = obj;
     }
 
     private deleteFile(path: string){
@@ -560,7 +567,7 @@ export class RequestConsistencyMiner {
             fs.unlink(path, (err) => {
                 if (err) {
                     if(this.options.debug)
-                        console.log(`RCM:deleteFile: error deleting file, path: ${path}`);
+                        console.log(`RCM:deleteFile: error deleting file, path: ${path}, err:${err}`);
                     rej(err);
                     return;
                 }

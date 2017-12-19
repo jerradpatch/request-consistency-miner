@@ -40,7 +40,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
         });
         this.watchListStart(this.obsExpiringPageCache, function (obj) {
             delete _this.pageCache[obj.url];
-            _this.deleteFile(obj.url);
+            var dir = _this.urlToDir(obj.url);
+            _this.deleteFile(dir);
         });
         this.torNewSession();
     }
@@ -372,8 +373,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
     };
     RequestConsistencyMiner.prototype._readUrlFromDisk = function (url) {
         var _this = this;
-        var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
-        var dir = this.options.storagePath + rDir;
+        var dir = this.urlToDir(url);
         var pcObj = this.pageCache[url];
         if (pcObj && !this.testIfDateExpired(pcObj, dir)) {
             if (this.options.debug)
@@ -397,11 +397,16 @@ var RequestConsistencyMiner = /** @class */ (function () {
                         });
                     }
                     obj.url = url;
-                    _this.addPageToPageCache(obj, url);
+                    _this.addPageToPageCache(obj);
                     res(obj);
                 }
             });
         });
+    };
+    RequestConsistencyMiner.prototype.urlToDir = function (url) {
+        var rDir = url.replace(/\//g, "%").replace(/ /g, "#");
+        var dir = this.options.storagePath + rDir;
+        return dir;
     };
     RequestConsistencyMiner.prototype.testIfDateExpired = function (obj, dir) {
         if (obj.date && !this.options.readFromDiskAlways) {
@@ -429,14 +434,15 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
                 if (_this.options.debug)
                     console.log("RCM:_writeUrlToDisk: the file was written to the disk, dir: '" + dir + ", time:" + data.date + "'");
-                _this.addPageToPageCache(data, url);
+                data.url = url;
+                _this.addPageToPageCache(data);
                 res(data);
             });
         });
     };
-    RequestConsistencyMiner.prototype.addPageToPageCache = function (obj, url) {
+    RequestConsistencyMiner.prototype.addPageToPageCache = function (obj) {
         this.obsExpiringPageCache.next(obj);
-        this.pageCache[url] = obj;
+        this.pageCache[obj.url] = obj;
     };
     RequestConsistencyMiner.prototype.deleteFile = function (path) {
         var _this = this;
@@ -446,7 +452,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             fs.unlink(path, function (err) {
                 if (err) {
                     if (_this.options.debug)
-                        console.log("RCM:deleteFile: error deleting file, path: " + path);
+                        console.log("RCM:deleteFile: error deleting file, path: " + path + ", err:" + err);
                     rej(err);
                     return;
                 }
