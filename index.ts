@@ -109,13 +109,13 @@ export class RequestConsistencyMiner {
 
                     Fiber(() => {
                         let data =  this._torRequest(oSource);
-                        let obj = {page:data};
+                        let obj = {page:data, url:url};
 
                         if(oSource.diskTimeToLive) {
                             obj['date']  = new Date(Date.now() + oSource.diskTimeToLive);
                         }
 
-                        return this._writeUrlToDisk(url, obj)
+                        return this._writeUrlToDisk(obj)
                             .then(() => {
                                 fut.return(data);
                             }, (err) => {
@@ -534,7 +534,7 @@ export class RequestConsistencyMiner {
         return false;
     }
 
-    private _writeUrlToDisk(url: string, data: IPageCacheObj): Promise<IPageCacheObj> {
+    private _writeUrlToDisk(data: IPageCacheObj): Promise<IPageCacheObj> {
 
         let rDir = url.replace(/\//g, "%").replace(/ /g, "#");
         let dir = this.options.storagePath + rDir;
@@ -548,7 +548,6 @@ export class RequestConsistencyMiner {
                 if(this.options.debug)
                     console.log(`RCM:_writeUrlToDisk: the file was written to the disk, dir: '${dir}, time:${data.date}'`);
 
-                data.url = url;
                 this.addPageToPageCache(data);
                 res(data);
             });
