@@ -194,7 +194,7 @@ export class RequestConsistencyMiner {
                                 this.writeIpList(ipAddress);
 
                                 if (this.options.debug)
-                                    console.error(`RCM:_torRequest:processRequest Ip added to the black list, blackList:${this.getIpBlackList()}`);
+                                    console.error(`RCM:_torRequest:processRequest Ip added to the black list, blackList:${this.getIpBlackList()}, body:${body}`);
 
                                 processNewSession.call(this);
                                 break;
@@ -207,7 +207,7 @@ export class RequestConsistencyMiner {
 
                                     processNewSession.call(this);
                                 } else {
-                                    throw new Error(`RCM:_torRequest:processRequest, an invalid option was returned from pageResponse()`);
+                                    fut.throw(new Error(`RCM:_torRequest:processRequest, an invalid option was returned from pageResponse():${pageSuccess}. Date/'blacklist'/'true'`));
                                 }
                         }
 
@@ -216,7 +216,7 @@ export class RequestConsistencyMiner {
                             console.error(`RCM:_torRequest:processRequest:error: connection timed out`);
 
                     } else {
-                        throw new Error(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`)
+                        fut.throw(new Error(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`));
                         // if (this.options.debug)
                         //     console.warn(`RCM:_torRequest:processRequest:error: ${err}, res.statusCode : ${res && res.statusCode}, \n\r oSource: ${JSON.stringify(oSource)}, \n\r options:${JSON.stringify(options)}`);
 
