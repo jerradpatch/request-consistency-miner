@@ -553,7 +553,7 @@ export class RequestConsistencyMiner {
             console.log(`RCM:deleteFile: requested file deletion, path: ${path}`);
 
         return new Promise((res,rej)=> {
-            fs.unlink(path, function (err) {
+            fs.unlink(path, (err) => {
                 if (err) {
                     if(this.options.debug)
                         console.log(`RCM:deleteFile: error deleting file, path: ${path}`);
