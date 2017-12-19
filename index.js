@@ -435,12 +435,13 @@ var RequestConsistencyMiner = /** @class */ (function () {
         this.pageCache[url] = obj;
     };
     RequestConsistencyMiner.prototype.deleteFile = function (path) {
+        var _this = this;
         if (this.options.debug)
             console.log("RCM:deleteFile: requested file deletion, path: " + path);
         return new Promise(function (res, rej) {
             fs.unlink(path, function (err) {
                 if (err) {
-                    if (this.options.debug)
+                    if (_this.options.debug)
                         console.log("RCM:deleteFile: error deleting file, path: " + path);
                     rej(err);
                     return;
