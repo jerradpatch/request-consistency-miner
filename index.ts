@@ -78,7 +78,7 @@ export class RequestConsistencyMiner {
 
         this.watchListStart(this.obsExpiringPageCache, (obj: IPageCacheObj) => {
             if(this.options.debug)
-                console.warn(`RCM:watchListStart: deleting due to date exipration, obj:${JSON.stringify(obj)}, Date:${new Date()}`);
+                console.warn(`RCM:watchListStart: deleting due to date exipration,CurrentDate:${new Date()}, SavedDate:${obj.date}, obj:${JSON.stringify(obj)}`);
 
             delete this.pageCache[obj.url];
             let dir = this.urlToDir(obj.url);
@@ -338,9 +338,9 @@ export class RequestConsistencyMiner {
 
         if(this.options.debug){
             if(found){
-                console.log(`RCM:ifIpAlreadyUsed: ip existed in allUsedIpAddress:${JSON.stringify(hasIp)}`);
+                console.log(`RCM:ifIpAlreadyUsed: ip existed, ipSearchingFor:${ipAddress}, allUsedIpAddress:${JSON.stringify(this.allUsedIpAddresses)}`);
             } else {
-                console.log(`RCM:ifIpAlreadyUsed: ip was not found in allUsedIpAddress:${JSON.stringify(hasIp)}`);
+                console.log(`RCM:ifIpAlreadyUsed: ip was not found, ipSearchingFor:${ipAddress}, allUsedIpAddress:${JSON.stringify(this.allUsedIpAddresses)}`);
             }
         }
         return found;
@@ -389,6 +389,9 @@ export class RequestConsistencyMiner {
             .mergeMap((obj:{date: Date})=>{
                 let difference = obj.date.valueOf() - Date.now();
                 let time = (difference > 0? difference : 0);
+                if(ops.debug)
+                    console.log(`RCM:watchListStart: setTimeout to deletion, time:${time}, obj.date:${obj.date}, date.now:${Date.now()}, obj.url:${obj.url}, source: ${oSource.source}`);
+
                 return Observable.create((obs)=>{
                     setTimeout(function(){
                         obs.next(obj);
@@ -502,7 +505,7 @@ export class RequestConsistencyMiner {
 
                     if(this.testIfDateExpired(obj, dir)){
                         if(this.options.debug)
-                            console.warn(`RCM:_readUrlFromDisk: deleting due to date exipration, obj:${JSON.stringify(obj)}, Date:${new Date()}`);
+                            console.warn(`RCM:_readUrlFromDisk: deleting due to date exipration, obj:${JSON.stringify(obj)}, currentDate:${new Date()}`);
 
                         return this.deleteFile(dir).then(rej, (err)=>{
                             rej(err);
@@ -535,7 +538,7 @@ export class RequestConsistencyMiner {
             }
         }
         if(this.options.debug)
-            console.log(`RCM:_readUrlFromDisk: file read from disk had a valid date or no date, path: ${dir}`);
+            console.log(`RCM:_readUrlFromDisk: file read from disk had a valid date or no date defined (cached forever), path: ${dir}`);
 
         return false;
     }
