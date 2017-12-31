@@ -386,11 +386,11 @@ export class RequestConsistencyMiner {
             .filter((obj:{date: Date})=>{
                 return !!obj.date;
             })
-            .mergeMap((obj:{date: Date})=>{
+            .mergeMap((obj:IPageCacheObj)=>{
                 let difference = obj.date.valueOf() - Date.now();
                 let time = (difference > 0? difference : 0);
                 if(this.options.debug)
-                    console.log(`RCM:watchListStart: setTimeout to deletion, time:${time}, obj.date:${obj.date}, date.now:${Date.now()}, obj.url:${obj.url}, source: ${oSource.source}`);
+                    console.log(`RCM:watchListStart: setTimeout to deletion, time:${time}, obj.date:${obj.date}, date.now:${Date.now()}, obj.url:${obj.url}`);
 
                 return Observable.create((obs)=>{
                     setTimeout(function(){

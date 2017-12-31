@@ -40,7 +40,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
         });
         this.watchListStart(this.obsExpiringPageCache, function (obj) {
             if (_this.options.debug)
-                console.warn("RCM:watchListStart: deleting due to date exipration, obj:" + JSON.stringify(obj) + ", Date:" + new Date());
+                console.warn("RCM:watchListStart: deleting due to date exipration,CurrentDate:" + new Date() + ", SavedDate:" + obj.date + ", obj:" + JSON.stringify(obj));
             delete _this.pageCache[obj.url];
             var dir = _this.urlToDir(obj.url);
             _this.deleteFile(dir);
@@ -253,10 +253,10 @@ var RequestConsistencyMiner = /** @class */ (function () {
         var found = hasIp.length > 0;
         if (this.options.debug) {
             if (found) {
-                console.log("RCM:ifIpAlreadyUsed: ip existed in allUsedIpAddress:" + JSON.stringify(hasIp));
+                console.log("RCM:ifIpAlreadyUsed: ip existed, ipSearchingFor:" + ipAddress + ", allUsedIpAddress:" + JSON.stringify(this.allUsedIpAddresses));
             }
             else {
-                console.log("RCM:ifIpAlreadyUsed: ip was not found in allUsedIpAddress:" + JSON.stringify(hasIp));
+                console.log("RCM:ifIpAlreadyUsed: ip was not found, ipSearchingFor:" + ipAddress + ", allUsedIpAddress:" + JSON.stringify(this.allUsedIpAddresses));
             }
         }
         return found;
@@ -295,6 +295,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
     //     return options;
     // }
     RequestConsistencyMiner.prototype.watchListStart = function ($list, removeList) {
+        var _this = this;
         return $list
             .filter(function (obj) {
             return !!obj.date;
@@ -302,6 +303,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
             .mergeMap(function (obj) {
             var difference = obj.date.valueOf() - Date.now();
             var time = (difference > 0 ? difference : 0);
+            if (_this.options.debug)
+                console.log("RCM:watchListStart: setTimeout to deletion, time:" + time + ", obj.date:" + obj.date + ", date.now:" + Date.now() + ", obj.url:" + obj.url);
             return Rx_1.Observable.create(function (obs) {
                 setTimeout(function () {
                     obs.next(obj);
@@ -396,7 +399,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
                         console.log("RCM:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj));
                     if (_this.testIfDateExpired(obj, dir)) {
                         if (_this.options.debug)
-                            console.warn("RCM:_readUrlFromDisk: deleting due to date exipration, obj:" + JSON.stringify(obj) + ", Date:" + new Date());
+                            console.warn("RCM:_readUrlFromDisk: deleting due to date exipration, obj:" + JSON.stringify(obj) + ", currentDate:" + new Date());
                         return _this.deleteFile(dir).then(rej, function (err) {
                             rej(err);
                         });
@@ -424,7 +427,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             }
         }
         if (this.options.debug)
-            console.log("RCM:_readUrlFromDisk: file read from disk had a valid date or no date, path: " + dir);
+            console.log("RCM:_readUrlFromDisk: file read from disk had a valid date or no date defined (cached forever), path: " + dir);
         return false;
     };
     RequestConsistencyMiner.prototype._writeUrlToDisk = function (data) {
