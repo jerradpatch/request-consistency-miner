@@ -458,7 +458,12 @@ export class RequestConsistencyMiner {
 
         try {
             let data: string = fs.readFileSync(path, {encoding: 'utf8'});
-            return data && JSON.parse(data) || [];
+            let ret = (data && JSON.parse(data) || []);
+            ret.forEach(da=>{
+                if(da.date)
+                    da.date = new Date(da.date);
+            });
+            return ret;
         } catch(e) {
             return [];
         };
@@ -499,6 +504,8 @@ export class RequestConsistencyMiner {
                     rej(err);
                 } else {
                     let obj = Object.assign({}, JSON.parse(readOnlyObj));
+                    if(obj.date)
+                        obj.date = new Date(obj.date);
 
                     if(this.options.debug)
                         console.log(`RCM:_readUrlFromDisk: reading cache from disk success, dir: '${dir}, keys:${Object.keys(obj)}`);

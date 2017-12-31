@@ -358,7 +358,12 @@ var RequestConsistencyMiner = /** @class */ (function () {
             console.log("RCM:readList: sync read from disk, path: " + path);
         try {
             var data = fs.readFileSync(path, { encoding: 'utf8' });
-            return data && JSON.parse(data) || [];
+            var ret = (data && JSON.parse(data) || []);
+            ret.forEach(function (da) {
+                if (da.date)
+                    da.date = new Date(da.date);
+            });
+            return ret;
         }
         catch (e) {
             return [];
@@ -395,6 +400,8 @@ var RequestConsistencyMiner = /** @class */ (function () {
                 }
                 else {
                     var obj = Object.assign({}, JSON.parse(readOnlyObj));
+                    if (obj.date)
+                        obj.date = new Date(obj.date);
                     if (_this.options.debug)
                         console.log("RCM:_readUrlFromDisk: reading cache from disk success, dir: '" + dir + ", keys:" + Object.keys(obj));
                     if (_this.testIfDateExpired(obj, dir)) {
