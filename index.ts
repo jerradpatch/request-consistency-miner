@@ -389,7 +389,7 @@ export class RequestConsistencyMiner {
             .mergeMap((obj:{date: Date})=>{
                 let difference = obj.date.valueOf() - Date.now();
                 let time = (difference > 0? difference : 0);
-                if(ops.debug)
+                if(this.options.debug)
                     console.log(`RCM:watchListStart: setTimeout to deletion, time:${time}, obj.date:${obj.date}, date.now:${Date.now()}, obj.url:${obj.url}, source: ${oSource.source}`);
 
                 return Observable.create((obs)=>{
