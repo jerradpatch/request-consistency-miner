@@ -304,7 +304,7 @@ var RequestConsistencyMiner = /** @class */ (function () {
             var difference = obj.date.valueOf() - Date.now();
             var time = (difference > 0 ? difference : 0);
             if (_this.options.debug)
-                console.log("RCM:watchListStart: setTimeout to deletion, time:" + time + ", obj.date:" + obj.date + ", date.now:" + Date.now() + ", obj.url:" + obj.url);
+                console.log("RCM:watchListStart: setTimeout to deletion, typeOfDate:" + typeof obj.date + ", difference:" + difference + ", time:" + time + ", obj.date:" + obj.date + ", date.now:" + Date.now() + ", obj.url:" + obj.url);
             return Rx_1.Observable.create(function (obs) {
                 setTimeout(function () {
                     obs.next(obj);
