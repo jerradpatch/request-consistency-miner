@@ -96,42 +96,44 @@ export class RequestConsistencyMiner {
 
         let url = oSource.source;
 
-        if(this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
+        let fut = new Future();
+        Fiber(() => {
+            if (this.options.readFromDiskAlways || oSource.diskTimeToLive) { //get from disk
 
-            let fut = new Future();
-            this._readUrlFromDisk(url)
-                .then((data: IPageCacheObj)=> {
-                    if(this.options.debug)
-                        console.log(`RCM:torRequest: file read from disk, keys: ${Object.keys(data)}`);
+                this._readUrlFromDisk(url)
+                    .then((data: IPageCacheObj)=> {
+                        if (this.options.debug)
+                            console.log(`RCM:torRequest: file read from disk, keys: ${Object.keys(data)}`);
 
-                    fut.return(data.page);
-                })
-                .catch((e)=> {
-                    if(this.options.debug)
-                        console.warn(`RCM:torRequest: file not read from disk, err: ${e}, oSource:${JSON.stringify(oSource)}`);
+                        fut.return(data.page);
+                    })
+                    .catch((e)=> {
+                        if (this.options.debug)
+                            console.warn(`RCM:torRequest: file not read from disk, err: ${e}, oSource:${JSON.stringify(oSource)}`);
 
-                    Fiber(() => {
-                        let data =  this._torRequest(oSource);
-                        let obj = {page:data, url:url};
+                        Fiber(() => {
+                            let data = this._torRequest(oSource);
+                            let obj = {page: data, url: url};
 
-                        if(oSource.diskTimeToLive) {
-                            obj['date']  = new Date(Date.now() + oSource.diskTimeToLive);
-                        }
+                            if (oSource.diskTimeToLive) {
+                                obj['date'] = new Date(Date.now() + oSource.diskTimeToLive);
+                            }
 
-                        return this._writeUrlToDisk(obj)
-                            .then(() => {
-                                fut.return(data);
-                            }, (err) => {
-                                if(this.options.debug)
-                                    console.log(`RCM:torRequest:error, _writeUrlToDisk->err:${err}`);
-                                fut.return(data);
-                            });//always return data
-                    }).run();
-                });
-            return fut.wait();
-        } else { //get from web
-            return this._torRequest(oSource);
-        }
+                            return this._writeUrlToDisk(obj)
+                                .then(() => {
+                                    fut.return(data);
+                                }, (err) => {
+                                    if (this.options.debug)
+                                        console.log(`RCM:torRequest:error, _writeUrlToDisk->err:${err}`);
+                                    fut.return(data);
+                                });//always return data
+                        }).run();
+                    });
+            } else { //get from web
+                fut.return(this._torRequest(oSource));
+            }
+        }).run();
+        return fut.wait();
     }
 
     static MAX_NEW_SESSIONS = 100;

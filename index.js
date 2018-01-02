@@ -52,38 +52,40 @@ var RequestConsistencyMiner = /** @class */ (function () {
         if (!oSource || !oSource.source || !oSource.pageResponse)
             throw new Error("RCM:torRequest:error, the required properties of the 'IRCMOptions_source' were not set, oSource:" + JSON.stringify(oSource));
         var url = oSource.source;
-        if (this.options.readFromDiskAlways || oSource.diskTimeToLive) {
-            var fut_1 = new Future();
-            this._readUrlFromDisk(url)
-                .then(function (data) {
-                if (_this.options.debug)
-                    console.log("RCM:torRequest: file read from disk, keys: " + Object.keys(data));
-                fut_1.return(data.page);
-            })
-                .catch(function (e) {
-                if (_this.options.debug)
-                    console.warn("RCM:torRequest: file not read from disk, err: " + e + ", oSource:" + JSON.stringify(oSource));
-                Fiber(function () {
-                    var data = _this._torRequest(oSource);
-                    var obj = { page: data, url: url };
-                    if (oSource.diskTimeToLive) {
-                        obj['date'] = new Date(Date.now() + oSource.diskTimeToLive);
-                    }
-                    return _this._writeUrlToDisk(obj)
-                        .then(function () {
-                        fut_1.return(data);
-                    }, function (err) {
-                        if (_this.options.debug)
-                            console.log("RCM:torRequest:error, _writeUrlToDisk->err:" + err);
-                        fut_1.return(data);
-                    }); //always return data
-                }).run();
-            });
-            return fut_1.wait();
-        }
-        else {
-            return this._torRequest(oSource);
-        }
+        var fut = new Future();
+        Fiber(function () {
+            if (_this.options.readFromDiskAlways || oSource.diskTimeToLive) {
+                _this._readUrlFromDisk(url)
+                    .then(function (data) {
+                    if (_this.options.debug)
+                        console.log("RCM:torRequest: file read from disk, keys: " + Object.keys(data));
+                    fut.return(data.page);
+                })
+                    .catch(function (e) {
+                    if (_this.options.debug)
+                        console.warn("RCM:torRequest: file not read from disk, err: " + e + ", oSource:" + JSON.stringify(oSource));
+                    Fiber(function () {
+                        var data = _this._torRequest(oSource);
+                        var obj = { page: data, url: url };
+                        if (oSource.diskTimeToLive) {
+                            obj['date'] = new Date(Date.now() + oSource.diskTimeToLive);
+                        }
+                        return _this._writeUrlToDisk(obj)
+                            .then(function () {
+                            fut.return(data);
+                        }, function (err) {
+                            if (_this.options.debug)
+                                console.log("RCM:torRequest:error, _writeUrlToDisk->err:" + err);
+                            fut.return(data);
+                        }); //always return data
+                    }).run();
+                });
+            }
+            else {
+                fut.return(_this._torRequest(oSource));
+            }
+        }).run();
+        return fut.wait();
     };
     RequestConsistencyMiner.prototype._torRequest = function (oSource) {
         var _this = this;
