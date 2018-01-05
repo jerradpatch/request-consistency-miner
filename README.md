@@ -1,4 +1,6 @@
-WIP
+WIP 
+
+TODO: when different calls to same page have different cache times, give a warning and set to lowest page cache time.
 
 # Request-Consistency-Miner
 - This makes a request, for the purpose of data mining, consistant given remote server anti-mining tactics. We use tor exit nodes for proxying requests.
